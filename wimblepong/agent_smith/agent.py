@@ -73,7 +73,7 @@ class Agent(object):
         self.policy.load_state_dict(weights, strict=False)
 
     def save_model(self, ep):
-        f_name = 'weights_'+ ep + ".mdl"
+        f_name = 'model_'+ ep + ".mdl"
         torch.save(self.policy.state_dict(), f_name)
 
     def preprocess(self, observation):

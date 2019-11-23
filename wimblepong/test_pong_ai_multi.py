@@ -59,3 +59,8 @@ for i in range(0, episodes):
         if done:
             # observation= env.reset()
             print("episode {} over. Broken WR: {:.3f}".format(i, win1/(i+1)))
+    if i % 500 == 0:
+        player.save_model(str(i))
+        print("Model saved")
+
+player.save_model("final")
