@@ -52,13 +52,14 @@ for i in range(0, episodes):
         #img = Image.fromarray(ob2)
         #img.save("ob2.png")
         # Count the wins
+
         if rew1 == 10:
             win1 += 1
         if not args.headless:
             env.render()
         if done:
             observation= env.reset()
-    if i % 200 == 0:
+    if i % 20 == 0:
         print("episode {} over. Broken WR: {:.3f}".format(i, win1 / (i + 1)))
     if i % 500 == 0:
         player.save_model(str(i))
