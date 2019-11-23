@@ -34,7 +34,7 @@ player = wimblepong.SimpleAi(env, player_id)
 env.set_names(player.get_name(), opponent.get_name())
 
 win1 = 0
-for i in range(0,episodes):
+for i in range(0, episodes):
     done = False
     while not done:
         # Get the actions from both SimpleAIs
