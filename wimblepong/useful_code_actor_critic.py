@@ -4,6 +4,7 @@ from torch.distributions import Normal
 import numpy as np
 from utils import discount_rewards
 
+
 class Value(torch.nn.Module):
     def __init__(self, state_space, action_space):
         super().__init__()
