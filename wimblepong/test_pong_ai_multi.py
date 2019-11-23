@@ -57,8 +57,9 @@ for i in range(0, episodes):
         if not args.headless:
             env.render()
         if done:
-            # observation= env.reset()
-            print("episode {} over. Broken WR: {:.3f}".format(i, win1/(i+1)))
+            observation= env.reset()
+    if i % 200 == 0:
+        print("episode {} over. Broken WR: {:.3f}".format(i, win1 / (i + 1)))
     if i % 500 == 0:
         player.save_model(str(i))
         print("Model saved")
