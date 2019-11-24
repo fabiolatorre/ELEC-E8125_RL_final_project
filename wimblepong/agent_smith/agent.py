@@ -74,7 +74,10 @@ class Agent(object):
         self.policy.load_state_dict(weights, strict=False)
 
     def save_model(self, ep):
-        f_name = 'model_'+ ep + ".mdl"
+        if not ep == "final":
+            f_name = 'model_' + ep + "_training.mdl"
+        else:
+            f_name = 'model_' + ep + ".mdl"
         torch.save(self.policy.state_dict(), f_name)
 
     def preprocess(self, observation):

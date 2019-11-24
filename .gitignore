@@ -7,3 +7,4 @@ gen
 *.log
 *.exe
 *__pycache__
+*training.mdl

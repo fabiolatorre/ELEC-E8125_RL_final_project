@@ -36,8 +36,8 @@ player = agent_smith.Agent(player_id)
 env.set_names(player.get_name(), opponent.get_name())
 
 win1 = 0
-wr_array = np.array()
-wr_array_avg = np.array()
+wr_array = []
+wr_array_avg = []
 for i in range(0, episodes):
     player.reset()
     ob1, ob2 = env.reset()
@@ -61,18 +61,18 @@ for i in range(0, episodes):
             env.render()
         if done:
             observation = env.reset()
-        np.append(wr_array, win1 / (i + 1))
-        np.append(wr_array_avg, np.mean(wr_array[max(0, len(wr_array)-100):]))
+    wr_array.append(win1 / (i + 1))
+    wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
     if i % 20 == 0:
         print("episode {} over. Broken WR: {:.3f}".format(i, wr_array[-1]))
     if i % 500 == 0:
         player.save_model(str(i))
         print("Model saved")
 
-    plt.plot(wr_array)
-    plt.plot(wr_array_avg)
-    plt.legend(["WR", "100-episode average"])
-    plt.title("WR history")
-    plt.savefig('./WR_history.pdf')
+plt.plot(wr_array)
+plt.plot(wr_array_avg)
+plt.legend(["WR", "100-episode average"])
+plt.title("WR history")
+plt.savefig('./WR_history.pdf')
 
 player.save_model("final")
