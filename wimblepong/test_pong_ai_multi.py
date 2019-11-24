@@ -36,6 +36,8 @@ player = agent_smith.Agent(player_id)
 env.set_names(player.get_name(), opponent.get_name())
 
 win1 = 0
+wr_array = []
+wr_array_avg = []
 for i in range(0, episodes):
     player.reset()
     ob1, ob2 = env.reset()
@@ -51,18 +53,31 @@ for i in range(0, episodes):
         #img.save("ob1.png")
         #img = Image.fromarray(ob2)
         #img.save("ob2.png")
-        # Count the wins
 
+        # Count the wins
         if rew1 == 10:
             win1 += 1
         if not args.headless:
             env.render()
         if done:
-            observation= env.reset()
+            observation = env.reset()
+    wr_array.append(win1 / (i + 1))
+    wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
     if i % 20 == 0:
-        print("episode {} over. Broken WR: {:.3f}".format(i, win1 / (i + 1)))
-    if i % 500 == 0:
+        print("episode {} over. Broken WR: {:.3f}".format(i, wr_array[-1]))
+    if i % 5000 == 0:
         player.save_model(str(i))
         print("Model saved")
+        plt.plot(wr_array)
+        plt.plot(wr_array_avg)
+        plt.legend(["WR", "100-episode average"])
+        plt.title("WR history")
+        plt.savefig('./plots/WR_history_{}_training.pdf'.format(i))
+
+plt.plot(wr_array)
+plt.plot(wr_array_avg)
+plt.legend(["WR", "100-episode average"])
+plt.title("WR history")
+plt.savefig('./plots/WR_history_final.pdf')
 
 player.save_model("final")

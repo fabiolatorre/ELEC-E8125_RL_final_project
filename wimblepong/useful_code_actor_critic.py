@@ -13,6 +13,7 @@ def discount_rewards(r, gamma):
     return discounted_r
 
 
+
 class Value(torch.nn.Module):
     def __init__(self, state_space, action_space):
         super().__init__()
