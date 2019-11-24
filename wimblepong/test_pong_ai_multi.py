@@ -8,9 +8,6 @@ import pickle
 import gym
 import numpy as np
 import argparse
-
-from scipy.stats import wrapcauchy_gen
-
 import wimblepong
 import agent_smith
 from PIL import Image
