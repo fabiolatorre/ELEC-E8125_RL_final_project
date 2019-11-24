@@ -65,14 +65,19 @@ for i in range(0, episodes):
     wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
     if i % 20 == 0:
         print("episode {} over. Broken WR: {:.3f}".format(i, wr_array[-1]))
-    if i % 500 == 0:
+    if i % 5000 == 0:
         player.save_model(str(i))
         print("Model saved")
+        plt.plot(wr_array)
+        plt.plot(wr_array_avg)
+        plt.legend(["WR", "100-episode average"])
+        plt.title("WR history")
+        plt.savefig('./WR_history_{}_training.pdf'.format(i))
 
 plt.plot(wr_array)
 plt.plot(wr_array_avg)
 plt.legend(["WR", "100-episode average"])
 plt.title("WR history")
-plt.savefig('./WR_history.pdf')
+plt.savefig('./WR_history_final.pdf')
 
 player.save_model("final")
