@@ -75,9 +75,9 @@ class Agent(object):
 
     def save_model(self, ep):
         if not ep == "final":
-            f_name = 'model_' + ep + "_training.mdl"
+            f_name = './models/model_' + ep + "_training.mdl"
         else:
-            f_name = 'model_' + ep + ".mdl"
+            f_name = './models/model_' + ep + ".mdl"
         torch.save(self.policy.state_dict(), f_name)
 
     def preprocess(self, observation):

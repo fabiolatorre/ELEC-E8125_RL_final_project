@@ -72,12 +72,12 @@ for i in range(0, episodes):
         plt.plot(wr_array_avg)
         plt.legend(["WR", "100-episode average"])
         plt.title("WR history")
-        plt.savefig('./WR_history_{}_training.pdf'.format(i))
+        plt.savefig('./plots/WR_history_{}_training.pdf'.format(i))
 
 plt.plot(wr_array)
 plt.plot(wr_array_avg)
 plt.legend(["WR", "100-episode average"])
 plt.title("WR history")
-plt.savefig('./WR_history_final.pdf')
+plt.savefig('./plots/WR_history_final.pdf')
 
 player.save_model("final")
