@@ -78,16 +78,13 @@ class Agent(object):
         torch.save(self.policy.state_dict(), f_name)
 
     def preprocess(self, observation):
-        observation = observation[::5, ::5].mean(axis=-1)
-        observation = np.where(observation > 50, 240, 0)
-
+        observation = observation[::2, ::2].mean(axis=-1)
+        observation = np.expand_dims(observation, axis=-1)
         if self.prev_obs is None:
             self.prev_obs = observation
-        else:
-            threshold_indices = self.prev_obs >= 80
-            self.prev_obs[threshold_indices] -= 80
-            self.prev_obs = self.prev_obs + observation
-        #self.prev_obs = np.expand_dims(self.prev_obs, axis=-1)
-        self.prev_obs = torch.from_numpy(self.prev_obs).float()
-        return self.prev_obs
+        stack_ob = np.concatenate((self.prev_obs, observation), axis=-1)
+        stack_ob = torch.from_numpy(stack_ob).float().unsqueeze(0)
+        stack_ob = stack_ob.transpose(1, 3)
+        self.prev_obs = observation
+        return stack_ob
 
