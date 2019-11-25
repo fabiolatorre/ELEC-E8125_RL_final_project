@@ -57,7 +57,7 @@ for episode in range(0, episodes):
             win1 += 1
 
         # Give reward for surviving, really helpful at the beginning
-        rew1 += 0.01
+        rew1 += 0.1
 
         # Store action's outcome (so that the agent can improve its policy)
         player.store_outcome(prev_ob1, action1, rew1)

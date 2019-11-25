@@ -132,14 +132,14 @@ class Agent(object):
         # Image scaling
         observation = observation[::5, ::5].mean(axis=-1)
         backgroung_threshold = 50
-        threshold = 10
-        n_past_steps = 10
+        threshold = 40
+        n_past_steps = 2
         ball_color = 255
 
         # Thresholding
-        observation = np.where(observation < backgroung_threshold, 0, observation)
-        observation = np.where(np.logical_and(observation < ball_color, observation >= backgroung_threshold), threshold, observation)
-        observation = np.where(observation == ball_color, n_past_steps * threshold, observation)
+        observation = np.where(observation < backgroung_threshold, 0, observation)  # delete background
+        observation = np.where(np.logical_and(observation < ball_color, observation >= backgroung_threshold), threshold, observation)  # set bars to threshold
+        observation = np.where(observation == ball_color, n_past_steps * threshold, observation)  # set latest bal value
 
         if self.stacked_obs is None:
             self.stacked_obs = observation
