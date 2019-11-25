@@ -132,8 +132,8 @@ class Agent(object):
         # Image scaling
         observation = observation[::5, ::5].mean(axis=-1)
         backgroung_threshold = 50
-        threshold = 60
-        n_past_steps = 4
+        threshold = 10
+        n_past_steps = 10
         ball_color = 255
 
         # Thresholding
