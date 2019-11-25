@@ -48,12 +48,10 @@ for i in range(0, episodes):
         action2 = opponent.get_action()
         # Step the environment and get the rewards and new observations
         (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
-
         # img = Image.fromarray(ob1)
         # img.save("ob1.png")
         # img = Image.fromarray(ob2)
         # img.save("ob2.png")
-
         # Count the wins
         if rew1 == 10:
             win1 += 1
