@@ -49,10 +49,10 @@ for i in range(0, episodes):
         # Step the environment and get the rewards and new observations
         (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
 
-        #img = Image.fromarray(ob1)
-        #img.save("ob1.png")
-        #img = Image.fromarray(ob2)
-        #img.save("ob2.png")
+        # img = Image.fromarray(ob1)
+        # img.save("ob1.png")
+        # img = Image.fromarray(ob2)
+        # img.save("ob2.png")
 
         # Count the wins
         if rew1 == 10:
@@ -61,6 +61,7 @@ for i in range(0, episodes):
             env.render()
         if done:
             observation = env.reset()
+        rew1 += 0.1
     wr_array.append(win1 / (i + 1))
     wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
     if i % 20 == 0:

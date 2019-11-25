@@ -5,59 +5,103 @@ import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
-class PolicyConv(torch.nn.Module):
+def discount_rewards(r, gamma):
+    discounted_r = torch.zeros_like(r)
+    running_add = 0
+    for t in reversed(range(0, r.size(-1))):
+        running_add = running_add * gamma + r[t]
+        discounted_r[t] = running_add
+    return discounted_r
+
+
+class Policy(torch.nn.Module):
     def __init__(self, action_space, hidden=64):
         super().__init__()
         self.action_space = action_space
         self.hidden = hidden
-        self.conv1 = torch.nn.Conv2d(2, 32, 3, 2)
-        self.conv2 = torch.nn.Conv2d(32, 64, 3, 2)
-        self.conv3 = torch.nn.Conv2d(64, 128, 3, 2)
-        self.reshaped_size = 128*11*11
-        self.fc1_actor = torch.nn.Linear(self.reshaped_size, self.hidden)
-        self.fc1_critic = torch.nn.Linear(self.reshaped_size, self.hidden)
-        self.fc2_mean = torch.nn.Linear(self.hidden, action_space)
-        self.fc2_value = torch.nn.Linear(self.hidden, 1)
+        # self.conv1 = torch.nn.Conv2d(2, 32, 3, 2)
+        # self.conv2 = torch.nn.Conv2d(32, 64, 3, 2)
+        # self.conv3 = torch.nn.Conv2d(64, 128, 3, 2)
+        # self.reshaped_size = 128*11*11
+
+        # self.fc1_actor = torch.nn.Linear(self.reshaped_size, self.hidden)
+        # self.fc1_critic = torch.nn.Linear(self.reshaped_size, self.hidden)
+        # self.fc2_mean = torch.nn.Linear(self.hidden, action_space)
+        # self.fc2_value = torch.nn.Linear(self.hidden, 1)
+
+        self.reshaped_size = 1600*1
+
+        self.fc1 = torch.nn.Linear(self.reshaped_size, self.hidden)
+        self.fc2 = torch.nn.Linear(self.hidden, self.hidden)
+        self.fc3_ac = torch.nn.Linear(self.hidden, action_space)
+        self.fc3_cr = torch.nn.Linear(self.hidden, 1)
 
     def forward(self, x):
-        x = self.conv1(x)
+        x = self.fc1(x)
         x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = self.conv3(x)
+        x = self.fc2(x)
         x = F.relu(x)
 
-        x = x.reshape(-1, self.reshaped_size)
-        x_ac = self.fc1_actor(x)
-        x_ac = F.relu(x_ac)
-        x_mean = self.fc2_mean(x_ac)
+        x_cr = self.fc3_cr(x)
 
-        x_probs = F.softmax(x_mean, dim=-1)
+        value = F.relu(x_cr)
+
+        x_mean = self.fc3_ac(x)
+
+        x_probs = F.softmax(x_mean)
         dist = Categorical(x_probs)
 
-        x_cr = self.fc1_critic(x)
-        x_cr = F.relu(x_cr)
-        value = self.fc2_value(x_cr)
-
         return dist, value
+
+
+        # x = self.conv2(x)
+        # x = F.relu(x)
+        # x = self.conv3(x)
+        # x = F.relu(x)
+        #
+        # x = x.reshape(-1, self.reshaped_size)
+        # x_ac = self.fc1_actor(x)
+        # x_ac = F.relu(x_ac)
+        # x_mean = self.fc2_mean(x_ac)
+        #
+        # x_probs = F.softmax(x_mean, dim=-1)
+        # dist = Categorical(x_probs)
+        #
+        # x_cr = self.fc1_critic(x)
+        # x_cr = F.relu(x_cr)
+        # value = self.fc2_value(x_cr)
+
+        # return dist, value
 
 
 
 class Agent(object):
     def __init__(self, player_id=1):
         self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.policy = PolicyConv(3, 128).to(self.train_device)
+        self.policy = Policy(3).to(self.train_device)
         self.prev_obs = None
         self.player_id = player_id
         self.policy.eval()
+        self.gamma = 0.98
 
-    def replace_policy(self):
-        self.old_policy.load_state_dict(self.policy.state_dict())
+        self.states = []
+        self.action_probs = []
+        self.rewards = []
+        self.values = []
 
-    def get_action(self, observation):
+    # def replace_policy(self):
+    #     self.old_policy.load_state_dict(self.policy.state_dict())
+
+    def get_action(self, observation, evaluation=False):
         x = self.preprocess(observation).to(self.train_device)
         dist, value = self.policy.forward(x)
-        action = torch.argmax(dist.probs)
+
+        if evaluation:
+            action = torch.argmax(dist.probs)
+        else:
+            action = dist.sample()
+
+        self.values.append(value)
         return action
 
     def reset(self):
@@ -90,7 +134,39 @@ class Agent(object):
             threshold_indices = self.prev_obs >= 80
             self.prev_obs[threshold_indices] -= 80
             self.prev_obs = self.prev_obs + observation
-        #self.prev_obs = np.expand_dims(self.prev_obs, axis=-1)
-        self.prev_obs = torch.from_numpy(self.prev_obs).float()
-        return self.prev_obs
+
+        return torch.from_numpy(self.prev_obs).float().flatten()
+
+    def episode_finished(self):
+        action_probs = torch.stack(self.action_probs, dim=0).to(self.train_device).squeeze(-1)
+        rewards = torch.stack(self.rewards, dim=0).to(self.train_device).squeeze(-1)
+        values = torch.stack(self.values, dim=0).to(self.train_device).squeeze(-1)
+
+        self.states, self.action_probs, self.rewards, self.values = [], [], [], []
+
+        # Compute discounted rewards
+        discounted_rewards = discount_rewards(rewards, self.gamma)
+
+        # Compute advantage
+        advantage = discounted_rewards - values
+
+        # Normalize advantage
+        advantage -= torch.mean(advantage)
+        advantage /= torch.std(advantage.detach())
+
+        weighted_probs = - action_probs * advantage.detach()
+
+        # Compute actor and critic loss
+        actor_loss = weighted_probs.mean()
+        critic_loss = advantage.pow(2).mean()
+        ac_loss = actor_loss + critic_loss
+
+        ac_loss.backward()
+
+    def store_outcome(self, observation, action_prob, action_taken, reward):
+        self.states.append(observation)
+        self.action_probs.append(action_prob)
+        self.rewards.append(torch.Tensor([reward]))
+
+
 
