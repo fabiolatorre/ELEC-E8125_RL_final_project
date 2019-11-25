@@ -61,6 +61,7 @@ for i in range(0, episodes):
             env.render()
         if done:
             observation = env.reset()
+        rew1 += 0.1
     wr_array.append(win1 / (i + 1))
     wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
     if i % 20 == 0:
