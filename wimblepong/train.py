@@ -9,7 +9,7 @@ import gym
 import numpy as np
 import argparse
 import wimblepong
-from agent_smith import Agent, Policy
+from agent_smith import Agent
 from PIL import Image
 
 # Make the environment

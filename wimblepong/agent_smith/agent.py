@@ -4,6 +4,8 @@ from torch.distributions import Categorical
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
+from torchvision import transforms
+from PIL import Image
 
 def discount_rewards(r, gamma):
     discounted_r = torch.zeros_like(r)
@@ -15,7 +17,7 @@ def discount_rewards(r, gamma):
 
 
 class Policy(torch.nn.Module):
-    def __init__(self, action_space, hidden=512):
+    def __init__(self, action_space, hidden=400):
         super().__init__()
         self.action_space = action_space
         self.hidden = hidden
@@ -23,9 +25,9 @@ class Policy(torch.nn.Module):
         self.reshaped_size = 1600*1
 
         self.fc1 = torch.nn.Linear(self.reshaped_size, self.hidden)
-        self.fc2 = torch.nn.Linear(self.hidden, self.hidden)
-        self.fc3_ac = torch.nn.Linear(self.hidden, action_space)
-        self.fc3_cr = torch.nn.Linear(self.hidden, 1)
+        self.fc2 = torch.nn.Linear(self.hidden, int(self.hidden/2))
+        self.fc3_ac = torch.nn.Linear(int(self.hidden/2), action_space)
+        self.fc3_cr = torch.nn.Linear(int(self.hidden/2), 1)
 
     def forward(self, x):
         x = self.fc1(x)
@@ -57,6 +59,10 @@ class Agent(object):
         self.policy.eval()
         self.gamma = 0.98
 
+        self.obs_prev_1 = 0
+        self.obs_prev_2 = 0
+        self.obs_prev_3 = 0
+
         self.states = []
         self.action_probs = []
         self.rewards = []
@@ -66,7 +72,7 @@ class Agent(object):
     #     self.old_policy.load_state_dict(self.policy.state_dict())
 
     def get_action(self, observation, evaluation=False):
-        x = self.preprocess(observation).to(self.train_device)
+        x = self.preprocess_no_fade(observation).to(self.train_device)
         dist, value = self.policy.forward(x)
 
         if evaluation:
@@ -143,7 +149,8 @@ class Agent(object):
 
         # Thresholding
         observation = np.where(observation < backgroung_threshold, 0, observation)  # delete background
-        observation = np.where(np.logical_and(observation < ball_color, observation >= backgroung_threshold), threshold, observation)  # set bars to threshold
+        observation = np.where(np.logical_and(observation < ball_color, observation >= backgroung_threshold), threshold,
+                               observation)  # set bars to threshold
         observation = np.where(observation == ball_color, n_past_steps * threshold, observation)  # set latest bal value
 
         if self.stacked_obs is None:
@@ -152,7 +159,39 @@ class Agent(object):
             threshold_indices = self.stacked_obs >= threshold
             self.stacked_obs[threshold_indices] -= threshold
             self.stacked_obs = self.stacked_obs + observation
-            self.stacked_obs = np.where(self.stacked_obs > n_past_steps * threshold, n_past_steps * threshold, self.stacked_obs)
+
+            self.stacked_obs = np.where(self.stacked_obs > n_past_steps * threshold, n_past_steps * threshold,
+                                        self.stacked_obs)  # handle overlappings
+
+        return torch.from_numpy(self.stacked_obs).float().flatten()
+
+    def preprocess_no_fade(self, observation):
+        # Image scaling
+        observation = Image.fromarray(observation)
+        observation = transforms.Grayscale()(observation)
+        observation = transforms.Resize((40, 40), 0)(observation)
+        observation = transforms.ToTensor()(observation)
+        observation = observation.squeeze().numpy()
+
+        # Set parameters
+        backgroung_threshold = 0.2
+        bars_color = 0.5
+        shrink_term = 0.8
+
+        # Thresholding
+        observation = np.where(observation < backgroung_threshold, 0, observation)  # delete background
+        observation = np.where(np.logical_and(observation > 0, observation < 1), bars_color, observation)
+
+        # Compute stacked_obs
+        if self.stacked_obs is None:
+            self.stacked_obs = observation
+        else:
+            self.stacked_obs = observation + shrink_term * (self.obs_prev_1 + self.obs_prev_2 + self.obs_prev_3)
+
+        # Update previous observations
+        self.obs_prev_3 = self.obs_prev_2
+        self.obs_prev_2 = self.obs_prev_1
+        self.obs_prev_1 = np.where(observation == bars_color, 0, observation)
 
         return torch.from_numpy(self.stacked_obs).float().flatten()
 
