@@ -72,9 +72,10 @@ for episode in range(0, episodes):
     wr_array.append(win1 / (episode + 1))
     wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
 
+    reward_history.append(reward_sum)
+    average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
+
     if not episode % 20 and episode:
-        reward_history.append(reward_sum)
-        average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
         print("episode {} over. Broken WR: {:.3f}. AVG reward: {}".format(episode, wr_array[-1], average_reward_history[-1]))
 
     if not episode % 100 and episode:
@@ -84,20 +85,37 @@ for episode in range(0, episodes):
         reward_history.append(reward_sum)
         average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
 
-    if not episode % 1000 and episode:
-        # Create plot of the training performance
+    if not episode % 40 and episode:
+        # Create plot of the training performance WR
         plt.plot(wr_array)
         plt.plot(wr_array_avg)
-        plt.legend(["WR", "100-episode average"])
+        plt.legend(["WR", "100-episode average"], loc='upper left')
         plt.title("WR history")
         plt.savefig('./plots/WR_history_training.pdf')
+        plt.clf()
+
+        # Create plot of the training performance reward
+        plt.plot(reward_history)
+        plt.plot(average_reward_history)
+        plt.legend(["Reward", "100-episode average"], loc='upper left')
+        plt.title("Reward history")
+        plt.savefig('./plots/reward_history_training.pdf')
+        plt.clf()
 
 # Create final plot of the training performance
 plt.plot(wr_array)
 plt.plot(wr_array_avg)
-plt.legend(["WR", "100-episode average"])
+plt.legend(["WR", "100-episode average"], loc='upper left')
 plt.title("WR history")
 plt.savefig('./plots/WR_history_final.pdf')
+plt.clf()
+
+# Create final plot of the training performance
+plt.plot(reward_history)
+plt.plot(average_reward_history)
+plt.legend(["reward", "100-episode average"], loc='upper left')
+plt.title("Reward history")
+plt.savefig('./plots/reward_history_final.pdf')
 
 # Save final model
 player.save_model(final=True)
