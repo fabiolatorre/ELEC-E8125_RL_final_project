@@ -50,7 +50,7 @@ class Agent(object):
         # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_device = torch.device("cpu")
         self.policy = Policy(3).to(self.train_device)
-        self.prev_obs = None
+        self.stacked_obs = None
         self.player_id = player_id
         self.policy.eval()
         self.gamma = 0.98
@@ -76,7 +76,7 @@ class Agent(object):
         return action
 
     def reset(self):
-        self.prev_obs = None
+        self.stacked_obs = None
 
     def get_name(self):
         return "Agent Smith"
@@ -96,19 +96,6 @@ class Agent(object):
         else:
             f_name = "./models/model_final.mdl"
         torch.save(self.policy.state_dict(), f_name)
-
-    def preprocess(self, observation):
-        observation = observation[::5, ::5].mean(axis=-1)
-        observation = np.where(observation > 50, 240, 0)
-
-        if self.prev_obs is None:
-            self.prev_obs = observation
-        else:
-            threshold_indices = self.prev_obs >= 80
-            self.prev_obs[threshold_indices] -= 80
-            self.prev_obs = self.prev_obs + observation
-
-        return torch.from_numpy(self.prev_obs).float().flatten()
 
     def episode_finished(self):
         action_probs = torch.stack(self.action_probs, dim=0).to(self.train_device).squeeze(-1)
@@ -140,6 +127,29 @@ class Agent(object):
         self.states.append(observation)
         self.action_probs.append(action_prob)
         self.rewards.append(torch.Tensor([reward]))
+
+    def preprocess(self, observation):
+        # Image scaling
+        observation = observation[::5, ::5].mean(axis=-1)
+        backgroung_threshold = 50
+        threshold = 60
+        n_past_steps = 4
+        ball_color = 255
+
+        # Thresholding
+        observation = np.where(observation < backgroung_threshold, 0, observation)
+        observation = np.where(np.logical_and(observation < ball_color, observation >= backgroung_threshold), threshold, observation)
+        observation = np.where(observation == ball_color, n_past_steps * threshold, observation)
+
+        if self.stacked_obs is None:
+            self.stacked_obs = observation
+        else:
+            threshold_indices = self.stacked_obs >= threshold
+            self.stacked_obs[threshold_indices] -= threshold
+            self.stacked_obs = self.stacked_obs + observation
+            self.stacked_obs = np.where(self.stacked_obs > n_past_steps * threshold, n_past_steps * threshold, self.stacked_obs)
+
+        return torch.from_numpy(self.stacked_obs).float().flatten()
 
 
 

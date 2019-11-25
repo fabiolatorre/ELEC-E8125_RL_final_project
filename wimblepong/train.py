@@ -73,15 +73,16 @@ for episode in range(0, episodes):
     wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
 
     if not episode % 20 and episode:
+        reward_history.append(reward_sum)
+        average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
         print("episode {} over. Broken WR: {:.3f}. AVG reward: {}".format(episode, wr_array[-1], average_reward_history[-1]))
-
-    reward_history.append(reward_sum)
-    average_reward_history.append(np.mean(reward_history[max(0, len(reward_history)-100):]))
 
     if not episode % 100 and episode:
         # Save model during training
         player.save_model()
         print("Model saved")
+        reward_history.append(reward_sum)
+        average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
 
     if not episode % 1000 and episode:
         # Create plot of the training performance
