@@ -47,7 +47,8 @@ class Policy(torch.nn.Module):
 
 class Agent(object):
     def __init__(self, player_id=1):
-        self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.train_device = torch.device("cpu")
         self.policy = Policy(3).to(self.train_device)
         self.prev_obs = None
         self.player_id = player_id
@@ -81,10 +82,12 @@ class Agent(object):
         return "Agent Smith"
 
     def load_model(self):
-        if torch.cuda.is_available():
-            weights = torch.load("model.mdl")
-        else:
-            weights = torch.load("model.mdl", map_location=torch.device('cpu'))
+        # if torch.cuda.is_available():
+        #     weights = torch.load("model.mdl")
+        # else:
+        #     weights = torch.load("model.mdl", map_location=torch.device('cpu'))
+
+        weights = torch.load("model.mdl", map_location=torch.device('cpu'))
         self.policy.load_state_dict(weights, strict=False)
 
     def save_model(self, final=False):
