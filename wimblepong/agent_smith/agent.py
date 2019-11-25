@@ -15,7 +15,7 @@ def discount_rewards(r, gamma):
 
 
 class Policy(torch.nn.Module):
-    def __init__(self, action_space, hidden=64):
+    def __init__(self, action_space, hidden=512):
         super().__init__()
         self.action_space = action_space
         self.hidden = hidden
@@ -46,10 +46,11 @@ class Policy(torch.nn.Module):
 
 
 class Agent(object):
-    def __init__(self, player_id=1):
+    def __init__(self, policy, player_id=1):
         # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_device = torch.device("cpu")
         self.policy = Policy(3).to(self.train_device)
+        self.optimizer = torch.optim.RMSprop(policy.parameters(), lr=5e-5)
         self.stacked_obs = None
         self.player_id = player_id
         self.policy.eval()
@@ -123,6 +124,9 @@ class Agent(object):
 
         ac_loss.backward()
 
+        self.optimizer.step()
+        self.optimizer.zero_grad()
+
     def store_outcome(self, observation, action_prob, reward):
         self.states.append(observation)
         self.action_probs.append(action_prob)
@@ -133,7 +137,7 @@ class Agent(object):
         observation = observation[::5, ::5].mean(axis=-1)
         backgroung_threshold = 50
         threshold = 40
-        n_past_steps = 2
+        n_past_steps = 3
         ball_color = 255
 
         # Thresholding
