@@ -85,7 +85,7 @@ for episode in range(0, episodes):
         reward_history.append(reward_sum)
         average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
 
-    if not episode % 40 and episode:
+    if not episode % 1000 and episode:
         # Create plot of the training performance WR
         plt.plot(wr_array)
         plt.plot(wr_array_avg)
