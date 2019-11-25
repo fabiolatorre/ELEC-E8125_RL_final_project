@@ -19,15 +19,6 @@ class Policy(torch.nn.Module):
         super().__init__()
         self.action_space = action_space
         self.hidden = hidden
-        # self.conv1 = torch.nn.Conv2d(2, 32, 3, 2)
-        # self.conv2 = torch.nn.Conv2d(32, 64, 3, 2)
-        # self.conv3 = torch.nn.Conv2d(64, 128, 3, 2)
-        # self.reshaped_size = 128*11*11
-
-        # self.fc1_actor = torch.nn.Linear(self.reshaped_size, self.hidden)
-        # self.fc1_critic = torch.nn.Linear(self.reshaped_size, self.hidden)
-        # self.fc2_mean = torch.nn.Linear(self.hidden, action_space)
-        # self.fc2_value = torch.nn.Linear(self.hidden, 1)
 
         self.reshaped_size = 1600*1
 
@@ -48,31 +39,10 @@ class Policy(torch.nn.Module):
 
         x_mean = self.fc3_ac(x)
 
-        x_probs = F.softmax(x_mean)
+        x_probs = F.softmax(x_mean, dim=-1)
         dist = Categorical(x_probs)
 
         return dist, value
-
-
-        # x = self.conv2(x)
-        # x = F.relu(x)
-        # x = self.conv3(x)
-        # x = F.relu(x)
-        #
-        # x = x.reshape(-1, self.reshaped_size)
-        # x_ac = self.fc1_actor(x)
-        # x_ac = F.relu(x_ac)
-        # x_mean = self.fc2_mean(x_ac)
-        #
-        # x_probs = F.softmax(x_mean, dim=-1)
-        # dist = Categorical(x_probs)
-        #
-        # x_cr = self.fc1_critic(x)
-        # x_cr = F.relu(x_cr)
-        # value = self.fc2_value(x_cr)
-
-        # return dist, value
-
 
 
 class Agent(object):
@@ -117,11 +87,11 @@ class Agent(object):
             weights = torch.load("model.mdl", map_location=torch.device('cpu'))
         self.policy.load_state_dict(weights, strict=False)
 
-    def save_model(self, ep):
-        if not ep == "final":
-            f_name = './models/model_' + ep + "_training.mdl"
+    def save_model(self, final=False):
+        if not final:
+            f_name = "./models/model_training.mdl"
         else:
-            f_name = './models/model_' + ep + ".mdl"
+            f_name = "./models/model_final.mdl"
         torch.save(self.policy.state_dict(), f_name)
 
     def preprocess(self, observation):
@@ -163,7 +133,7 @@ class Agent(object):
 
         ac_loss.backward()
 
-    def store_outcome(self, observation, action_prob, action_taken, reward):
+    def store_outcome(self, observation, action_prob, reward):
         self.states.append(observation)
         self.action_probs.append(action_prob)
         self.rewards.append(torch.Tensor([reward]))
