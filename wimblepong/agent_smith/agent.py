@@ -46,10 +46,11 @@ class Policy(torch.nn.Module):
 
 
 class Agent(object):
-    def __init__(self, policy, player_id=1):
+    def __init__(self, player_id=1, action_space=3):
         # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        policy = Policy(action_space)
         self.train_device = torch.device("cpu")
-        self.policy = Policy(3).to(self.train_device)
+        self.policy = Policy(action_space).to(self.train_device)
         self.optimizer = torch.optim.RMSprop(policy.parameters(), lr=5e-5)
         self.stacked_obs = None
         self.player_id = player_id

@@ -23,8 +23,7 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = wimblepong.SimpleAi(env, opponent_id)
 
-policy = Policy(3)
-player = Agent(policy, player_id)
+player = Agent(player_id)
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
