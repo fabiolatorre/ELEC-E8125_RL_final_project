@@ -83,6 +83,7 @@ for episode in range(0, episodes):
         player.save_model()
         print("Model saved")
 
+    if not episode % 1000 and episode:
         # Create plot of the training performance
         plt.plot(wr_array)
         plt.plot(wr_array_avg)
