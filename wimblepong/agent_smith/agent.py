@@ -1,11 +1,10 @@
-import torch
 import numpy as np
-from torch.distributions import Categorical
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
 from torchvision import transforms
 from PIL import Image
+
 
 def discount_rewards(r, gamma):
     discounted_r = torch.zeros_like(r)
@@ -36,11 +35,9 @@ class Policy(torch.nn.Module):
         x = F.relu(x)
 
         x_cr = self.fc3_cr(x)
-
         value = F.relu(x_cr)
 
         x_mean = self.fc3_ac(x)
-
         x_probs = F.softmax(x_mean, dim=-1)
         dist = Categorical(x_probs)
 
@@ -53,7 +50,7 @@ class Agent(object):
         policy = Policy(action_space)
         self.train_device = torch.device("cpu")
         self.policy = Policy(action_space).to(self.train_device)
-        self.optimizer = torch.optim.RMSprop(policy.parameters(), lr=5e-5)
+        self.optimizer = torch.optim.RMSprop(policy.parameters(), lr=5e-3)
         self.stacked_obs = None
         self.player_id = player_id
         self.policy.eval()
@@ -174,26 +171,24 @@ class Agent(object):
         observation = observation.squeeze().numpy()
 
         # Set parameters
-        backgroung_threshold = 0.2
+        background_threshold = 0.2
         bars_color = 0.5
         shrink_term = 0.8
 
-        # Thresholding
-        observation = np.where(observation < backgroung_threshold, 0, observation)  # delete background
+        # Apply thresholds
+        observation = np.where(observation < background_threshold, 0, observation)  # delete background
         observation = np.where(np.logical_and(observation > 0, observation < 1), bars_color, observation)
 
         # Compute stacked_obs
         if self.stacked_obs is None:
             self.stacked_obs = observation
         else:
-            self.stacked_obs = observation + shrink_term * (self.obs_prev_1 + self.obs_prev_2 + self.obs_prev_3)
+            # self.stacked_obs = observation + shrink_term * (self.obs_prev_1 + self.obs_prev_2 + self.obs_prev_3)
+            self.stacked_obs = observation + shrink_term * self.obs_prev_1
 
         # Update previous observations
-        self.obs_prev_3 = self.obs_prev_2
-        self.obs_prev_2 = self.obs_prev_1
+        # self.obs_prev_3 = self.obs_prev_2  # oldest
+        # self.obs_prev_2 = self.obs_prev_1
         self.obs_prev_1 = np.where(observation == bars_color, 0, observation)
 
         return torch.from_numpy(self.stacked_obs).float().flatten()
-
-
-

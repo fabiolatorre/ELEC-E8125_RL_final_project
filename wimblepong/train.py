@@ -10,7 +10,6 @@ import numpy as np
 import argparse
 import wimblepong
 from agent_smith import Agent
-from PIL import Image
 
 # Make the environment
 env = gym.make("WimblepongVisualMultiplayer-v0")
