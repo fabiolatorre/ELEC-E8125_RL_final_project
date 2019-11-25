@@ -87,7 +87,7 @@ class Agent(object):
         # else:
         #     weights = torch.load("model.mdl", map_location=torch.device('cpu'))
 
-        weights = torch.load("model.mdl", map_location=torch.device('cpu'))
+        weights = torch.load("../models/model_training.mdl", map_location=torch.device('cpu'))
         self.policy.load_state_dict(weights, strict=False)
 
     def save_model(self, final=False):
