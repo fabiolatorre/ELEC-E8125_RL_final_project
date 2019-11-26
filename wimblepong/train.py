@@ -42,7 +42,7 @@ for episode in range(0, episodes):
     done = False
     while not done:
         # Get the actions from both players
-        action1 = player.get_action(ob1)
+        action1, action_prob1 = player.get_action(ob1)
         action2 = opponent.get_action()
 
         prev_ob1 = ob1
@@ -54,11 +54,11 @@ for episode in range(0, episodes):
         if rew1 == 10:
             win1 += 1
 
-        # Give reward for surviving, really helpful at the beginning
+        # Give reward for surviving
         rew1 += 0.1
 
         # Store action's outcome (so that the agent can improve its policy)
-        player.store_outcome(prev_ob1, action1, rew1)
+        player.store_outcome(action_prob1, action1, rew1)
 
         if done:
             observation = env.reset()
@@ -66,10 +66,13 @@ for episode in range(0, episodes):
         # Store total episode reward
         reward_sum += rew1
 
-        player.episode_finished()
+        player.episode_finished()  # TODO: to be fully understood
+
+    # Update WR values for plots
     wr_array.append(win1 / (episode + 1))
     wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
 
+    # Update reward values for plots
     reward_history.append(reward_sum)
     average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
 
@@ -80,8 +83,6 @@ for episode in range(0, episodes):
         # Save model during training
         player.save_model()
         print("Model saved")
-        reward_history.append(reward_sum)
-        average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
 
     if not episode % 1000 and episode:
         # Create plot of the training performance WR
@@ -100,6 +101,9 @@ for episode in range(0, episodes):
         plt.savefig('./plots/reward_history_training.pdf')
         plt.clf()
 
+# Save final model
+player.save_model(final=True)
+
 # Create final plot of the training performance
 plt.plot(wr_array)
 plt.plot(wr_array_avg)
@@ -114,6 +118,3 @@ plt.plot(average_reward_history)
 plt.legend(["reward", "100-episode average"], loc='upper left')
 plt.title("Reward history")
 plt.savefig('./plots/reward_history_final.pdf')
-
-# Save final model
-player.save_model(final=True)

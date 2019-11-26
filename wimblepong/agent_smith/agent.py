@@ -52,10 +52,12 @@ class Agent(object):
         self.policy = Policy(action_space).to(self.train_device)
         self.optimizer = torch.optim.RMSprop(policy.parameters(), lr=5e-3)
         self.stacked_obs = None
+        self.prev_stacked_obs = None
         self.player_id = player_id
         self.policy.eval()
         self.gamma = 0.98
 
+        # Previous observation (greatest number = oldest)
         self.obs_prev_1 = 0
         self.obs_prev_2 = 0
         self.obs_prev_3 = 0
@@ -64,9 +66,6 @@ class Agent(object):
         self.action_probs = []
         self.rewards = []
         self.values = []
-
-    # def replace_policy(self):
-    #     self.old_policy.load_state_dict(self.policy.state_dict())
 
     def get_action(self, observation, evaluation=False):
         x = self.preprocess_no_fade(observation).to(self.train_device)
@@ -77,11 +76,14 @@ class Agent(object):
         else:
             action = dist.sample()
 
-        self.values.append(value)
-        return action
+        act_log_prob = dist.log_prob(action)
 
-    def reset(self):
+        self.values.append(value)
+        return action.detach(), act_log_prob
+
+    def reset(self):  # TODO: maybe to be completed (?)
         self.stacked_obs = None
+        self.prev_stacked_obs = None
 
     def get_name(self):
         return "Agent Smith"
@@ -131,8 +133,8 @@ class Agent(object):
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-    def store_outcome(self, observation, action_prob, reward):
-        self.states.append(observation)
+    def store_outcome(self, action_prob, action, reward):
+        self.states.append(self.prev_stacked_obs)
         self.action_probs.append(action_prob)
         self.rewards.append(torch.Tensor([reward]))
 
@@ -183,6 +185,7 @@ class Agent(object):
         if self.stacked_obs is None:
             self.stacked_obs = observation
         else:
+            self.prev_stacked_obs = self.stacked_obs
             # self.stacked_obs = observation + shrink_term * (self.obs_prev_1 + self.obs_prev_2 + self.obs_prev_3)
             self.stacked_obs = observation + shrink_term * self.obs_prev_1
 
