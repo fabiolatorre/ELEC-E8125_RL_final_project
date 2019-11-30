@@ -23,8 +23,8 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = wimblepong.SimpleAi(env, opponent_id)
 
-policy = Policy(env.action_space.shape[-1])
-player = Agent(player_id, policy)
+policy = Policy(env.action_space.n)
+player = Agent(policy, player_id)
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
@@ -60,7 +60,7 @@ for episode in range(0, episodes):
         # rew1 += 0.1
 
         # Store action's outcome (so that the agent can improve its policy)
-        player.store_outcome(action_prob1, action1, rew1)
+        player.store_outcome(ob1, action_prob1, action1, rew1)
 
         if done:
             player.store_next_values(torch.tensor([0.0]))  # save also the values of the next state

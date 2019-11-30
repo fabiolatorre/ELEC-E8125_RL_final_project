@@ -105,6 +105,7 @@ class Agent(object):
         action_probs = torch.stack(self.action_probs, dim=0).to(self.train_device).squeeze(-1)
         rewards = torch.stack(self.rewards, dim=0).to(self.train_device).squeeze(-1)
         values = torch.stack(self.values, dim=0).to(self.train_device).squeeze(-1)
+        next_values = torch.stack(self.next_values, dim=0).to(self.train_device).squeeze(-1) # values from the network
 
         self.states, self.action_probs, self.rewards, self.values = [], [], [], []
 
@@ -130,8 +131,8 @@ class Agent(object):
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-    def store_outcome(self, action_prob, action, reward):
-        self.states.append(self.prev_stacked_obs)
+    def store_outcome(self, observation, action_prob, action, reward):
+        self.states.append(observation)
         self.action_probs.append(action_prob)
         self.rewards.append(torch.Tensor([reward]))
 
