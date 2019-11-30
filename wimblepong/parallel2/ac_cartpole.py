@@ -3,9 +3,9 @@ import gym
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
-from agent import Agent, Policy
-from cp_cont import CartPoleEnv
-from parallel_env import ParallelEnvs
+from parallel2.agent import Agent, Policy
+from parallel2.cp_cont import CartPoleEnv
+from parallel2.parallel_env import ParallelEnvs
 import pandas as pd
 
 

@@ -45,62 +45,58 @@ class Policy(torch.nn.Module):
 
 
 class Agent(object):
-    def __init__(self, player_id=1, action_space=3):
+    def __init__(self, policy, player_id=1, action_space=3):
         # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        policy = Policy(action_space)
         self.train_device = torch.device("cpu")
-        self.policy = Policy(action_space).to(self.train_device)
+        self.policy = policy.to(self.train_device)
         self.optimizer = torch.optim.RMSprop(policy.parameters(), lr=5e-3)
-        self.stacked_obs = None
-        self.prev_stacked_obs = None
+        # self.stacked_obs = None
+        # self.prev_stacked_obs = None
         self.player_id = player_id
-        self.policy.eval()
+        # self.policy.eval()
         self.gamma = 0.98
 
         # Previous observation (greatest number = oldest)
-        self.obs_prev_1 = 0
-        self.obs_prev_2 = 0
-        self.obs_prev_3 = 0
+        # self.obs_prev_1 = 0
+        # self.obs_prev_2 = 0
+        # self.obs_prev_3 = 0
 
         self.states = []
         self.action_probs = []
         self.rewards = []
         self.values = []
+        self.next_values = []
 
     def get_action(self, observation, evaluation=False):
         # x = self.preprocess_no_fade(observation).to(self.train_device)
-        x = torch.from_numpy(observation).float()
+        x = torch.from_numpy(observation).float().to(self.train_device)
         dist, value = self.policy.forward(x)
 
         if evaluation:
-            action = torch.argmax(dist.probs)
+            action = torch.argmax(dist.probs)  # take most probable action
         else:
-            action = dist.sample()
+            action = dist.sample()  # sample from distribution
 
         act_log_prob = dist.log_prob(action)
 
         self.values.append(value)
-        return action.detach(), act_log_prob
+        return action, act_log_prob
 
-    def reset(self):  # TODO: maybe to be completed (?)
-        self.stacked_obs = None
-        self.prev_stacked_obs = None
+    def reset(self):  # TODO: needed?
+        # self.stacked_obs = None
+        # self.prev_stacked_obs = None
+        pass
 
     def get_name(self):
         return "Agent Smith"
 
     def load_model(self):
-        # if torch.cuda.is_available():
-        #     weights = torch.load("model.mdl")
-        # else:
-        #     weights = torch.load("model.mdl", map_location=torch.device('cpu'))
-
         weights = torch.load("../models/model_training.mdl", map_location=torch.device('cpu'))
         self.policy.load_state_dict(weights, strict=False)
 
-    def save_model(self, final=False):
+    def save_model(self, episode=0, final=False):
         if not final:
-            f_name = "./models/model_training.mdl"
+            f_name = "./models/model_episode_{}.mdl".format(episode)
         else:
             f_name = "./models/model_final.mdl"
         torch.save(self.policy.state_dict(), f_name)
@@ -138,6 +134,9 @@ class Agent(object):
         self.states.append(self.prev_stacked_obs)
         self.action_probs.append(action_prob)
         self.rewards.append(torch.Tensor([reward]))
+
+    def store_next_values(self, v_next):
+        self.next_values.append(v_next)
 
     def preprocess(self, observation):
         # Image scaling
@@ -196,3 +195,4 @@ class Agent(object):
         self.obs_prev_1 = np.where(observation == bars_color, 0, observation)
 
         return torch.from_numpy(self.stacked_obs).float().flatten()
+

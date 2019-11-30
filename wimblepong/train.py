@@ -9,7 +9,8 @@ import gym
 import numpy as np
 import argparse
 import wimblepong
-from agent_smith import Agent
+from agent_smith import Agent, Policy
+import torch
 
 # Make the environment
 env = gym.make("WimblepongMultiplayer-v0")
@@ -22,7 +23,8 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = wimblepong.SimpleAi(env, opponent_id)
 
-player = Agent(player_id)
+policy = Policy(env.action_space.shape[-1])
+player = Agent(player_id, policy)
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
@@ -48,7 +50,7 @@ for episode in range(0, episodes):
         # prev_ob1 = ob1
 
         # Step the environment and get the rewards and new observations
-        (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
+        (ob1, ob2), (rew1, rew2), done, info = env.step((action1.detach(), action2))
 
         # Count the wins
         if rew1 == 10:
@@ -61,12 +63,15 @@ for episode in range(0, episodes):
         player.store_outcome(action_prob1, action1, rew1)
 
         if done:
-            observation = env.reset()
-
+            player.store_next_values(torch.tensor([0.0]))  # save also the values of the next state
+        else:
+            x = torch.from_numpy(ob1).float().to(player.train_device)
+            _, v_next = player.policy.forward(x)
+            player.store_next_values(v_next)
         # Store total episode reward
         reward_sum += rew1
 
-        player.episode_finished()
+    player.episode_finished()
 
     # Update WR values for plots
     wr_array.append(win1 / (episode + 1))
@@ -81,7 +86,7 @@ for episode in range(0, episodes):
 
     if not episode % 100 and episode:
         # Save model during training
-        player.save_model()
+        player.save_model(episode)
         print("Model saved")
 
     if not episode % 1000 and episode:
