@@ -12,7 +12,7 @@ import wimblepong
 from agent_smith import Agent
 
 # Make the environment
-env = gym.make("WimblepongVisualMultiplayer-v0")
+env = gym.make("WimblepongMultiplayer-v0")
 
 # Number of episodes/games to play
 episodes = 100000
@@ -45,7 +45,7 @@ for episode in range(0, episodes):
         action1, action_prob1 = player.get_action(ob1)
         action2 = opponent.get_action()
 
-        prev_ob1 = ob1
+        # prev_ob1 = ob1
 
         # Step the environment and get the rewards and new observations
         (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
@@ -55,7 +55,7 @@ for episode in range(0, episodes):
             win1 += 1
 
         # Give reward for surviving
-        rew1 += 0.1
+        # rew1 += 0.1
 
         # Store action's outcome (so that the agent can improve its policy)
         player.store_outcome(action_prob1, action1, rew1)
@@ -66,7 +66,7 @@ for episode in range(0, episodes):
         # Store total episode reward
         reward_sum += rew1
 
-        player.episode_finished()  # TODO: to be fully understood
+        player.episode_finished()
 
     # Update WR values for plots
     wr_array.append(win1 / (episode + 1))

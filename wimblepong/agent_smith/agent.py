@@ -16,12 +16,12 @@ def discount_rewards(r, gamma):
 
 
 class Policy(torch.nn.Module):
-    def __init__(self, action_space, hidden=400):
+    def __init__(self, action_space, hidden=10):
         super().__init__()
         self.action_space = action_space
         self.hidden = hidden
 
-        self.reshaped_size = 1600*1
+        self.reshaped_size = 6
 
         self.fc1 = torch.nn.Linear(self.reshaped_size, self.hidden)
         self.fc2 = torch.nn.Linear(self.hidden, int(self.hidden/2))
@@ -68,7 +68,8 @@ class Agent(object):
         self.values = []
 
     def get_action(self, observation, evaluation=False):
-        x = self.preprocess_no_fade(observation).to(self.train_device)
+        # x = self.preprocess_no_fade(observation).to(self.train_device)
+        x = torch.from_numpy(observation).float()
         dist, value = self.policy.forward(x)
 
         if evaluation:
