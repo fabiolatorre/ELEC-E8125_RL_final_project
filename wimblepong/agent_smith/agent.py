@@ -16,12 +16,13 @@ def discount_rewards(r, gamma):
 
 
 class Policy(torch.nn.Module):
-    def __init__(self, action_space, hidden=10):
+    def __init__(self, state_space, action_space):
         super().__init__()
+        self.state_space = state_space
         self.action_space = action_space
-        self.hidden = hidden
+        self.hidden = 10
 
-        self.reshaped_size = 6
+        self.reshaped_size = state_space
 
         self.fc1 = torch.nn.Linear(self.reshaped_size, self.hidden)
         self.fc2 = torch.nn.Linear(self.hidden, int(self.hidden/2))

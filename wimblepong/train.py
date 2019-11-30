@@ -23,7 +23,9 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = wimblepong.SimpleAi(env, opponent_id)
 
-policy = Policy(env.action_space.n)
+a = env.observation_space
+
+policy = Policy(env.observation_space.shape[-1], env.action_space.n)
 player = Agent(policy, player_id)
 
 # Set the names for both players
@@ -37,11 +39,15 @@ win1 = 0
 wr_array = []
 wr_array_avg = []
 
+episode_length_history = []
+average_episode_length = []
+
 for episode in range(0, episodes):
     reward_sum = 0
     player.reset()
     ob1, ob2 = env.reset()
     done = False
+    episode_length = 0
     while not done:
         # Get the actions from both players
         action1, action_prob1 = player.get_action(ob1)
@@ -70,6 +76,7 @@ for episode in range(0, episodes):
             player.store_next_values(v_next)
         # Store total episode reward
         reward_sum += rew1
+        episode_length += 1
 
     player.episode_finished()
 
@@ -81,8 +88,12 @@ for episode in range(0, episodes):
     reward_history.append(reward_sum)
     average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
 
+    # Update episode_length values
+    episode_length_history.append(episode_length)
+    average_episode_length.append(np.mean(episode_length_history[max(0, len(episode_length_history) - 100):]))
+
     if not episode % 20 and episode:
-        print("episode {} over. Broken WR: {:.3f}. AVG reward: {}".format(episode, wr_array[-1], average_reward_history[-1]))
+        print("Episode {} over. Broken WR: {:.3f}. AVG reward: {}. Episode legth: {:.2f}.".format(episode, wr_array[-1], average_reward_history[-1], average_episode_length[-1]))
 
     if not episode % 100 and episode:
         # Save model during training
