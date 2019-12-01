@@ -23,40 +23,44 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = wimblepong.SimpleAi(env, opponent_id)
 
-a = env.observation_space
+# Get dimensionalities of actions and observations
+observation_space_dim = env.observation_space.shape[-1]
+action_space_dim = env.action_space.n
 
-policy = Policy(env.observation_space.shape[-1], env.action_space.n)
+policy = Policy(observation_space_dim, action_space_dim)
 player = Agent(policy, player_id)
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
 
-# Arrays to keep track of rewards
+# Lists to keep track of rewards
 reward_history = []
 average_reward_history = []
-
 win1 = 0
 wr_array = []
 wr_array_avg = []
-
 episode_length_history = []
 average_episode_length = []
 
 for episode in range(0, episodes):
+    # Initialize values
     reward_sum = 0
+    episode_length = 0
+    done = False
+
+    # Resets
     player.reset()
     ob1, ob2 = env.reset()
-    done = False
-    episode_length = 0
     while not done:
         # Get the actions from both players
         action1, action_prob1 = player.get_action(ob1)
         action2 = opponent.get_action()
 
-        # prev_ob1 = ob1
+        # Store previous observation
+        prev_ob1 = ob1
 
         # Step the environment and get the rewards and new observations
-        (ob1, ob2), (rew1, rew2), done, info = env.step((action1.detach(), action2))
+        (ob1, ob2), (rew1, rew2), done, info = env.step((action1.detach().numpy(), action2))
 
         # Count the wins
         if rew1 == 10:
@@ -66,19 +70,13 @@ for episode in range(0, episodes):
         # rew1 += 0.1
 
         # Store action's outcome (so that the agent can improve its policy)
-        player.store_outcome(ob1, action_prob1, action1, rew1)
+        player.store_outcome(prev_ob1, ob1, action_prob1, rew1, done)
 
-        if done:
-            player.store_next_values(torch.tensor([0.0]))  # save also the values of the next state
-        else:
-            x = torch.from_numpy(ob1).float().to(player.train_device)
-            _, v_next = player.policy.forward(x)
-            player.store_next_values(v_next)
         # Store total episode reward
         reward_sum += rew1
         episode_length += 1
 
-    player.episode_finished()
+    player.episode_finished(episode)
 
     # Update WR values for plots
     wr_array.append(win1 / (episode + 1))
