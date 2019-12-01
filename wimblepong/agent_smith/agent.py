@@ -20,68 +20,59 @@ class Policy(torch.nn.Module):
         super().__init__()
         self.state_space = state_space
         self.action_space = action_space
-        self.hidden = 10
+        self.hidden = 64
 
         self.reshaped_size = state_space
 
         self.fc1 = torch.nn.Linear(self.reshaped_size, self.hidden)
-        self.fc2 = torch.nn.Linear(self.hidden, int(self.hidden/2))
-        self.fc3_ac = torch.nn.Linear(int(self.hidden/2), action_space)
-        self.fc3_cr = torch.nn.Linear(int(self.hidden/2), 1)
+        self.fc2_ac = torch.nn.Linear(int(self.hidden), action_space)
+        self.fc2_cr = torch.nn.Linear(int(self.hidden), 1)
+        self.init_weights()
+
+    def init_weights(self):
+        for m in self.modules():
+            if type(m) is torch.nn.Linear:
+                torch.nn.init.normal_(m.weight)#, -1e-3, 1e-3)
+                torch.nn.init.zeros_(m.bias)
 
     def forward(self, x):
+        # Common part
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.fc2(x)
-        x = F.relu(x)
 
-        x_cr = self.fc3_cr(x)
-        value = F.relu(x_cr)
-
-        x_mean = self.fc3_ac(x)
+        # Actor part
+        x_mean = self.fc2_ac(x)
         x_probs = F.softmax(x_mean, dim=-1)
         dist = Categorical(x_probs)
+
+        # Critic part
+        value = self.fc2_cr(x)
 
         return dist, value
 
 
 class Agent(object):
-    def __init__(self, policy, player_id=1, action_space=3):
+    def __init__(self, policy, player_id=1):
         # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_device = torch.device("cpu")
         self.policy = policy.to(self.train_device)
-        self.optimizer = torch.optim.RMSprop(policy.parameters(), lr=5e-3)
+        self.optimizer = torch.optim.RMSprop(policy.parameters(), lr=1e-3)
+        self.player_id = player_id
+        self.gamma = 0.98
+        self.batch_size = 1
+        self.states = []
+        self.next_states = []
+        self.actions = []
+        self.rewards = []
+        self.done = []
+
         # self.stacked_obs = None
         # self.prev_stacked_obs = None
-        self.player_id = player_id
-        # self.policy.eval()
-        self.gamma = 0.98
 
-        # Previous observation (greatest number = oldest)
+        # Previous observations (greatest number = oldest) - better using a FIFO stack
         # self.obs_prev_1 = 0
         # self.obs_prev_2 = 0
         # self.obs_prev_3 = 0
-
-        self.states = []
-        self.action_probs = []
-        self.rewards = []
-        self.values = []
-        self.next_values = []
-
-    def get_action(self, observation, evaluation=False):
-        # x = self.preprocess_no_fade(observation).to(self.train_device)
-        x = torch.from_numpy(observation).float().to(self.train_device)
-        dist, value = self.policy.forward(x)
-
-        if evaluation:
-            action = torch.argmax(dist.probs)  # take most probable action
-        else:
-            action = dist.sample()  # sample from distribution
-
-        act_log_prob = dist.log_prob(action)
-
-        self.values.append(value)
-        return action, act_log_prob
 
     def reset(self):  # TODO: needed?
         # self.stacked_obs = None
@@ -102,43 +93,76 @@ class Agent(object):
             f_name = "./models/model_final.mdl"
         torch.save(self.policy.state_dict(), f_name)
 
-    def episode_finished(self):
-        action_probs = torch.stack(self.action_probs, dim=0).to(self.train_device).squeeze(-1)
-        rewards = torch.stack(self.rewards, dim=0).to(self.train_device).squeeze(-1)
-        values = torch.stack(self.values, dim=0).to(self.train_device).squeeze(-1)
-        next_values = torch.stack(self.next_values, dim=0).to(self.train_device).squeeze(-1) # values from the network
+    def episode_finished(self, episode_number):
+        all_actions = torch.stack(self.actions, dim=0).to(self.train_device).squeeze(-1)
+        all_states = torch.stack(self.states, dim=0).to(self.train_device).squeeze(-1)
+        all_next_states = torch.stack(self.next_states, dim=0).to(self.train_device).squeeze(-1)
+        all_rewards = torch.stack(self.rewards, dim=0).to(self.train_device).squeeze(-1)
+        all_done = torch.Tensor(self.done).to(self.train_device)
+        self.states, self.next_states, self.actions, self.rewards, self.done = [], [], [], [], []
 
-        self.states, self.action_probs, self.rewards, self.values = [], [], [], []
+        # # Compute discounted rewards
+        # discounted_rewards = discount_rewards(all_rewards, self.gamma)
 
-        # Compute discounted rewards
-        discounted_rewards = discount_rewards(rewards, self.gamma)
+        # Compute state value estimates
+        _, old_state_values = self.policy(all_states)
+        _, next_state_values = self.policy(all_next_states)
 
-        # Compute advantage
-        advantage = discounted_rewards - values
+        # Zero out values of terminal states
+        next_state_values = next_state_values.squeeze(-1) * (1 - all_done)
 
-        # Normalize advantage
-        advantage -= torch.mean(advantage)
-        advantage /= torch.std(advantage.detach())
+        # Detach, squeeze, etc.
+        next_state_values = next_state_values.detach()
+        old_state_values = old_state_values.squeeze(-1)
 
-        weighted_probs = - action_probs * advantage.detach()
+        # Estimate of state value and critic loss
+        updated_state_values = all_rewards + self.gamma * next_state_values
+        critic_loss = F.mse_loss(old_state_values, updated_state_values.detach())
+
+        # # Compute advantage
+        # advantage = discounted_rewards - values
+
+        # Estimate advantage
+        advantages = updated_state_values - old_state_values
+        advantages -= torch.mean(advantages)
+        advantages /= torch.std(advantages.detach())
+
+        weighted_probs = - all_actions * advantages.detach()
 
         # Compute actor and critic loss
-        actor_loss = weighted_probs.mean()
-        critic_loss = advantage.pow(2).mean()
-        ac_loss = actor_loss + critic_loss
+        actor_loss = -torch.mean(weighted_probs)  # TODO: check sign
+        loss = actor_loss + critic_loss
 
-        ac_loss.backward()
+        loss.backward()
 
+        if (episode_number+1) % self.batch_size == 0:
+            self.update_policy()
+
+        return critic_loss.item()
+
+    def update_policy(self):
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-    def store_outcome(self, observation, action_prob, action, reward):
-        self.states.append(observation)
-        self.action_probs.append(action_prob)
-        self.rewards.append(torch.Tensor([reward]))
+    def get_action(self, observation, evaluation=False):
+        x = torch.from_numpy(observation).float().to(self.train_device)
+        dist, _ = self.policy.forward(x)
 
-    def store_next_values(self, v_next):
-        self.next_values.append(v_next)
+        if evaluation:
+            action = torch.argmax(dist.probs)  # take most probable action
+        else:
+            action = dist.sample()  # sample from distribution
+
+        act_log_prob = dist.log_prob(action)
+
+        return action, act_log_prob
+
+    def store_outcome(self, state, next_state, action_prob, reward, done):
+        self.states.append(torch.from_numpy(state).float())
+        self.next_states.append(torch.from_numpy(next_state).float())
+        self.actions.append(action_prob)
+        self.rewards.append(torch.Tensor([reward]))
+        self.done.append(done)
 
     def preprocess(self, observation):
         # Image scaling

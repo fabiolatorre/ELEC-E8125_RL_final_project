@@ -4,8 +4,8 @@ import random
 
 class SimpleAi(object):
     def __init__(self, env, player_id=1):
-        if type(env) is not Wimblepong:
-            raise TypeError("I'm not a very smart AI. All I can play is Wimblepong.")
+        # if type(env) is not Wimblepong:
+        #     raise TypeError("I'm not a very smart AI. All I can play is Wimblepong.")
         self.env = env
         # Set the player id that determines on which side the ai is going to play
         self.player_id = player_id  

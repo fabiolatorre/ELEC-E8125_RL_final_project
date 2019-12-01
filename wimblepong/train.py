@@ -11,9 +11,12 @@ import argparse
 import wimblepong
 from agent_smith import Agent, Policy
 import torch
+from parallel_env import ParallelEnvs
 
 # Make the environment
-env = gym.make("WimblepongMultiplayer-v0")
+env_name = ("WimblepongMultiplayer-v0")
+update_steps = 10  # TODO: parallel
+env = ParallelEnvs(env_name, processes=8, envs_per_process=8)
 
 # Number of episodes/games to play
 episodes = 100000
@@ -23,40 +26,41 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = wimblepong.SimpleAi(env, opponent_id)
 
-a = env.observation_space
+observation_space_dim = env.observation_space.shape[-1]
+action_space_dim = env.action_space.n
 
-policy = Policy(env.observation_space.shape[-1], env.action_space.n)
+# Create policy and player
+policy = Policy(observation_space_dim, action_space_dim)
 player = Agent(policy, player_id)
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
 
-# Arrays to keep track of rewards
+# Declare list to keep track of rewards, WR and episode lentgth
 reward_history = []
 average_reward_history = []
-
 win1 = 0
 wr_array = []
 wr_array_avg = []
-
 episode_length_history = []
 average_episode_length = []
 
+# Training loop
 for episode in range(0, episodes):
     reward_sum = 0
+    episode_length = 0
+
     player.reset()
     ob1, ob2 = env.reset()
     done = False
-    episode_length = 0
     while not done:
         # Get the actions from both players
         action1, action_prob1 = player.get_action(ob1)
         action2 = opponent.get_action()
 
-        # prev_ob1 = ob1
-
         # Step the environment and get the rewards and new observations
         (ob1, ob2), (rew1, rew2), done, info = env.step((action1.detach(), action2))
+        prev_ob1 = ob1  # TODO: check what parallel env returns
 
         # Count the wins
         if rew1 == 10:
@@ -66,19 +70,33 @@ for episode in range(0, episodes):
         # rew1 += 0.1
 
         # Store action's outcome (so that the agent can improve its policy)
-        player.store_outcome(ob1, action_prob1, action1, rew1)
+        for i in range(len(info["infos"])):
+            env_done = False
+            # Check if the environment is finished; if so, store cumulative reward
+            for envid, envreward in info["finished"]:
+                if envid == i:
+                    reward_history.append(envreward)
+                    average_reward_history.append(np.mean(reward_history[-100:]))
+                    env_done = True
+                    break
+            player.store_outcome(prev_ob1[i], ob1[i], action_prob1[i], rew1[i], env_done)
 
-        if done:
-            player.store_next_values(torch.tensor([0.0]))  # save also the values of the next state
-        else:
-            x = torch.from_numpy(ob1).float().to(player.train_device)
-            _, v_next = player.policy.forward(x)
-            player.store_next_values(v_next)
+
+        # if done:
+        #     player.store_next_values(torch.tensor([0.0]))  # save also the values of the next state
+        # else:
+        #     x = torch.from_numpy(ob1).float().to(player.train_device)
+        #     _, v_next = player.policy.forward(x)
+        #     player.store_next_values(v_next)
+
         # Store total episode reward
         reward_sum += rew1
         episode_length += 1
 
-    player.episode_finished()
+    # player.episode_finished()
+
+    if episode % update_steps == update_steps - 1:
+        player.episode_finished(0)
 
     # Update WR values for plots
     wr_array.append(win1 / (episode + 1))
