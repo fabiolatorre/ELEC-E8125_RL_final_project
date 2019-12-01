@@ -9,7 +9,7 @@ import gym
 import numpy as np
 import argparse
 import wimblepong
-from agent_smith import Agent, Policy
+from agent_smith import Agent, Policy, Value
 import torch
 
 # Make the environment
@@ -28,7 +28,8 @@ observation_space_dim = env.observation_space.shape[-1]
 action_space_dim = env.action_space.n
 
 policy = Policy(observation_space_dim, action_space_dim)
-player = Agent(policy, player_id)
+value = Value(observation_space_dim, action_space_dim)
+player = Agent(policy, value, player_id)
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
@@ -67,8 +68,9 @@ for episode in range(0, episodes):
             win1 += 1
 
         # Give reward for surviving
-        if episode_length < 200:
+        if episode < 50000 and episode_length < 200:
             rew1 += 0.05
+
 
         # Store action's outcome (so that the agent can improve its policy)
         player.store_outcome(prev_ob1, ob1, action_prob1, rew1, done)

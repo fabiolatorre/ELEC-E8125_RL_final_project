@@ -1,1 +1,1 @@
-from agent_smith.agent import Agent, Policy
+from agent_smith.agent import Agent, Policy, Value

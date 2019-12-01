@@ -9,7 +9,7 @@ import gym
 import numpy as np
 import argparse
 import wimblepong
-import agent_smith
+from agent_smith import Agent, Policy, Value
 from PIL import Image
 
 parser = argparse.ArgumentParser()
@@ -19,7 +19,8 @@ parser.add_argument("--scale", type=int, help="Scale of the rendered game", defa
 args = parser.parse_args()
 
 # Make the environment
-env = gym.make("WimblepongVisualMultiplayer-v0")
+# env = gym.make("WimblepongVisualMultiplayer-v0")
+env = gym.make("WimblepongMultiplayer-v0")
 env.unwrapped.scale = args.scale
 env.unwrapped.fps = args.fps
 # Number of episodes/games to play
@@ -30,7 +31,15 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = wimblepong.SimpleAi(env, opponent_id)
 # player = wimblepong.SimpleAi(env, player_id)
-player = agent_smith.Agent(player_id)
+
+# Get dimensionalities of actions and observations
+observation_space_dim = env.observation_space.shape[-1]
+action_space_dim = env.action_space.n
+
+policy = Policy(observation_space_dim, action_space_dim)
+value = Value(observation_space_dim, action_space_dim)
+player = Agent(policy, value, player_id)
+player.load_model()
 
 # Set the names for both SimpleAIs
 env.set_names(player.get_name(), opponent.get_name())
@@ -44,7 +53,7 @@ for i in range(0, episodes):
     done = False
     while not done:
         # Get the actions from both SimpleAIs
-        action1 = player.get_action(ob1)
+        action1, action_prob1 = player.get_action(ob1)
         action2 = opponent.get_action()
         # Step the environment and get the rewards and new observations
         (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
