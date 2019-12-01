@@ -106,7 +106,7 @@ class Agent(object):
     def load_model(self):
         cwd = os.getcwd()
         print(cwd)
-        eps= 8100
+        eps= 12200
         weights_p = torch.load("./models/model_p_episode_"+str(eps)+".mdl", map_location=torch.device('cpu'))
         weights_v = torch.load("./models/model_v_episode_"+str(eps)+".mdl", map_location=torch.device('cpu'))
 
