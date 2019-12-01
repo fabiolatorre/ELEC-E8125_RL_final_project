@@ -67,7 +67,7 @@ for episode in range(0, episodes):
             win1 += 1
 
         # Give reward for surviving
-        # rew1 += 0.1
+        rew1 += 0.05
 
         # Store action's outcome (so that the agent can improve its policy)
         player.store_outcome(prev_ob1, ob1, action_prob1, rew1, done)
@@ -91,7 +91,7 @@ for episode in range(0, episodes):
     average_episode_length.append(np.mean(episode_length_history[max(0, len(episode_length_history) - 100):]))
 
     if not episode % 20 and episode:
-        print("Episode {} over. Broken WR: {:.3f}. AVG reward: {}. Episode legth: {:.2f}.".format(episode, wr_array[-1], average_reward_history[-1], average_episode_length[-1]))
+        print("Episode {} over. Broken WR: {:.3f}. AVG reward: {:.3f}. Episode legth: {:.2f}.".format(episode, wr_array[-1], average_reward_history[-1], average_episode_length[-1]))
 
     if not episode % 100 and episode:
         # Save model during training

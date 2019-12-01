@@ -101,8 +101,8 @@ class Agent(object):
         all_done = torch.Tensor(self.done).to(self.train_device)
         self.states, self.next_states, self.actions, self.rewards, self.done = [], [], [], [], []
 
-        # # Compute discounted rewards
-        # discounted_rewards = discount_rewards(all_rewards, self.gamma)
+        # Compute discounted rewards
+        discounted_rewards = discount_rewards(all_rewards, self.gamma)
 
         # Compute state value estimates
         _, old_state_values = self.policy(all_states)
@@ -116,7 +116,7 @@ class Agent(object):
         old_state_values = old_state_values.squeeze(-1)
 
         # Estimate of state value and critic loss
-        updated_state_values = all_rewards + self.gamma * next_state_values
+        updated_state_values = discounted_rewards + self.gamma * next_state_values
         critic_loss = F.mse_loss(old_state_values, updated_state_values.detach())
 
         # # Compute advantage
@@ -124,13 +124,14 @@ class Agent(object):
 
         # Estimate advantage
         advantages = updated_state_values - old_state_values
-        advantages -= torch.mean(advantages)
-        advantages /= torch.std(advantages.detach())
+        # advantages -= torch.mean(advantages)
+        # advantages /= torch.std(advantages.detach())
 
+        # Weighted log probs
         weighted_probs = - all_actions * advantages.detach()
 
         # Compute actor and critic loss
-        actor_loss = -torch.mean(weighted_probs)  # TODO: check sign
+        actor_loss = torch.mean(weighted_probs)  # TODO: check sign
         loss = actor_loss + critic_loss
 
         loss.backward()
