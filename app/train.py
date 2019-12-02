@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 from wimblepong import SimpleAi
-from agent_smith import Agent, Policy
+from agent_smith import Agent
 from utils.utils import plot
 import os
 
@@ -23,8 +23,7 @@ opponent = SimpleAi(env, opponent_id)
 observation_space_dim = env.observation_space.shape[-1]
 action_space_dim = env.action_space.n
 
-policy = Policy(observation_space_dim, action_space_dim)
-player = Agent(policy, player_id)
+player = Agent(player_id)
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())

@@ -17,16 +17,16 @@ def discount_rewards(r, gamma):
 
 
 class Policy(torch.nn.Module):
-    def __init__(self, state_space, action_space):
+    def __init__(self):
         super().__init__()
-        self.state_space = state_space
-        self.action_space = action_space
+        # self.state_space = state_space
+        self.action_space = 3
         self.hidden = 64
 
         self.reshaped_size = 40*40
 
         self.fc1 = torch.nn.Linear(self.reshaped_size, self.hidden)
-        self.fc2_ac = torch.nn.Linear(int(self.hidden), action_space)
+        self.fc2_ac = torch.nn.Linear(int(self.hidden), self.action_space)
         self.fc2_cr = torch.nn.Linear(int(self.hidden), 1)
         self.init_weights()
 
@@ -53,11 +53,11 @@ class Policy(torch.nn.Module):
 
 
 class Agent(object):
-    def __init__(self, policy, player_id=1):
+    def __init__(self, player_id=1):
         # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_device = torch.device("cpu")
-        self.policy = policy.to(self.train_device)
-        self.optimizer = torch.optim.RMSprop(policy.parameters(), lr=1e-3)
+        self.policy = Policy().to(self.train_device)
+        self.optimizer = torch.optim.RMSprop(self.policy.parameters(), lr=1e-3)
         self.player_id = player_id
         self.gamma = 0.98
         # self.policy.eval()  # uncomment if testing
@@ -85,7 +85,7 @@ class Agent(object):
 
     def load_model(self):
         try:
-            weights = torch.load("../models/model_0.mdl", map_location=torch.device('cpu'))
+            weights = torch.load("../model_100.mdl", map_location=torch.device('cpu'))
             self.policy.load_state_dict(weights, strict=False)
         except FileNotFoundError:
             print("Model not found. Check the path and try again.")
