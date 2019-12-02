@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="app",
+    name="wimblepong",
     version="1.0",
     author="Karol Arndt, Oliver Struckmeier",
     author_email="karol.arndt@aalto.fi, oliver.struckmeier@aalto.fi",

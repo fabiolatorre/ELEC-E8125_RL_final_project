@@ -1,17 +1,12 @@
-"""
-This is an example on how to use the two player Wimblepong environment
-with two SimpleAIs playing against each other
-"""
-from random import randint
-import pickle
 import gym
 import numpy as np
-import argparse
-import wimblepong
+from wimblepong import SimpleAi
 from agent_smith import Agent, Policy
 from utils.utils import plot
-import torch
-import matplotlib.pyplot as plt
+import os
+
+PLOTS_DIR = os.path.abspath("./plots")
+MODELS_DIR = os.path.abspath("./models")
 
 # Make the environment
 env = gym.make("WimblepongVisualMultiplayer-v0")
@@ -22,7 +17,7 @@ episodes = 100000
 # Define the player IDs for both SimpleAI agents
 player_id = 1
 opponent_id = 3 - player_id
-opponent = wimblepong.SimpleAi(env, opponent_id)
+opponent = SimpleAi(env, opponent_id)
 
 # Get dimensionalities of actions and observations
 observation_space_dim = env.observation_space.shape[-1]
@@ -35,15 +30,15 @@ player = Agent(policy, player_id)
 env.set_names(player.get_name(), opponent.get_name())
 
 # Lists to keep track of rewards
-reward_history = []
-average_reward_history = []
-win1 = 0
-wr_array = []
-wr_array_avg = []
-episode_length_history = []
-average_episode_length = []
+reward_history, reward_history_avg = [], []
+wr_array, wr_array_avg = [], []
+episode_length_history, episode_length_avg = [], []
 
 for episode in range(0, episodes):
+    if not episode % 1000:
+        # Initialize winning rate
+        win1 = 0
+
     # Initialize values
     reward_sum = 0
     episode_length = 0
@@ -68,13 +63,13 @@ for episode in range(0, episodes):
             win1 += 1
 
         # Store action's outcome (so that the agent can improve its policy)
-        player.store_outcome(prev_ob1, ob1, action_prob1, rew1, done)
+        player.store_outcome(action_prob1, action1, rew1)
 
         # Store total episode reward
         reward_sum += rew1
         episode_length += 1
 
-    player.episode_finished(episode)
+    player.episode_finished()
 
     # Update WR values for plots
     wr_array.append(win1 / (episode + 1))
@@ -82,47 +77,37 @@ for episode in range(0, episodes):
 
     # Update reward values for plots
     reward_history.append(reward_sum)
-    average_reward_history.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
+    reward_history_avg.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
 
     # Update episode_length values
     episode_length_history.append(episode_length)
-    average_episode_length.append(np.mean(episode_length_history[max(0, len(episode_length_history) - 100):]))
+    episode_length_avg.append(np.mean(episode_length_history[max(0, len(episode_length_history) - 100):]))
 
     if not episode % 20 and episode:
-        print("Episode {} over. Broken WR: {:.3f}. AVG reward: {:.3f}. Episode legth: {:.2f}.".format(episode, wr_array[-1], average_reward_history[-1], average_episode_length[-1]))
+        print("Episode {} over. Broken WR: {:.3f}. AVG reward: {:.3f}. Episode legth: {:.2f}."
+              .format(episode, wr_array[-1], reward_history_avg[-1], episode_length_avg[-1]))
 
     if not episode % 100 and episode:
         # Save model during training
-        player.save_model(episode)
+        player.save_model(MODELS_DIR, episode)
         print("Model saved")
 
     if not episode % 1000 and episode:
-        plot(wr_array, wr_array_avg, "WR history", "WR_history_training", "./plots/", ["WR", "100-episode average"])  # TODO: fix absolute path
-        # TODO: change all the other plots
         # Create plot of the training performance WR
+        plot(wr_array, wr_array_avg, "WR history", "WR_history_training",
+             PLOTS_DIR, ["WR", "100-episode average"])
 
         # Create plot of the training performance reward
-        plt.plot(reward_history)
-        plt.plot(average_reward_history)
-        plt.legend(["Reward", "100-episode average"], loc='upper left')
-        plt.title("Reward history")
-        plt.savefig('./plots/reward_history_training.pdf')
-        plt.clf()
+        plot(reward_history, reward_history_avg, "Reward history", "reward_history_training",
+             PLOTS_DIR, ["Reward", "100-episode average"])
 
 # Save final model
-player.save_model(final=True)
+player.save_model(MODELS_DIR, episodes)
 
-# Create final plot of the training performance
-plt.plot(wr_array)
-plt.plot(wr_array_avg)
-plt.legend(["WR", "100-episode average"], loc='upper left')
-plt.title("WR history")
-plt.savefig('./plots/WR_history_final.pdf')
-plt.clf()
+# Create final plot of the training performance WR
+plot(wr_array, wr_array_avg, "WR history", "WR_history_final",
+     PLOTS_DIR, ["WR", "100-episode average"])
 
-# Create final plot of the training performance
-plt.plot(reward_history)
-plt.plot(average_reward_history)
-plt.legend(["reward", "100-episode average"], loc='upper left')
-plt.title("Reward history")
-plt.savefig('./plots/reward_history_final.pdf')
+# Create final plot of the training performance reward
+plot(reward_history, reward_history_avg, "Reward history", "reward_history_final",
+     PLOTS_DIR, ["Reward", "100-episode average"])
