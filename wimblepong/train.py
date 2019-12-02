@@ -2,7 +2,6 @@
 This is an example on how to use the two player Wimblepong environment
 with two SimpleAIs playing against each other
 """
-import matplotlib.pyplot as plt
 from random import randint
 import pickle
 import gym
@@ -10,7 +9,9 @@ import numpy as np
 import argparse
 import wimblepong
 from agent_smith import Agent, Policy
+from utils.utils import plot
 import torch
+import matplotlib.pyplot as plt
 
 # Make the environment
 env = gym.make("WimblepongMultiplayer-v0")
@@ -66,10 +67,6 @@ for episode in range(0, episodes):
         if rew1 == 10:
             win1 += 1
 
-        # Give reward for surviving
-        if episode < 50000 and episode_length < 200:
-            rew1 += 0.05
-
         # Store action's outcome (so that the agent can improve its policy)
         player.store_outcome(prev_ob1, ob1, action_prob1, rew1, done)
 
@@ -100,13 +97,9 @@ for episode in range(0, episodes):
         print("Model saved")
 
     if not episode % 1000 and episode:
+        plot(wr_array, wr_array_avg, "WR history", "WR_history_training", "./plots/", ["WR", "100-episode average"])  # TODO: fix absolute path
+        # TODO: change all the other plots
         # Create plot of the training performance WR
-        plt.plot(wr_array)
-        plt.plot(wr_array_avg)
-        plt.legend(["WR", "100-episode average"], loc='upper left')
-        plt.title("WR history")
-        plt.savefig('./plots/WR_history_training.pdf')
-        plt.clf()
 
         # Create plot of the training performance reward
         plt.plot(reward_history)

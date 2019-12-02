@@ -8,3 +8,7 @@ gen
 *.exe
 *__pycache__
 *.DS_Store
+*.mdl
+*.pdf
+*models/
+*plots/
