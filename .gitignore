@@ -12,3 +12,4 @@ gen
 *.pdf
 *models/
 *plots/
+*.png
