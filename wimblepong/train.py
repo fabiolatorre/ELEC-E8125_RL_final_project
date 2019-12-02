@@ -67,7 +67,7 @@ for episode in range(0, episodes):
             win1 += 1
 
         # Give reward for surviving
-        if episode_length < 200:
+        if episode < 50000 and episode_length < 200:
             rew1 += 0.05
 
         # Store action's outcome (so that the agent can improve its policy)

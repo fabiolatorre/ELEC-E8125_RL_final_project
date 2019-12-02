@@ -32,7 +32,7 @@ class Policy(torch.nn.Module):
     def init_weights(self):
         for m in self.modules():
             if type(m) is torch.nn.Linear:
-                torch.nn.init.normal_(m.weight)#, -1e-3, 1e-3)
+                torch.nn.init.normal_(m.weight)  #, -1e-3, 1e-3)
                 torch.nn.init.zeros_(m.bias)
 
     def forward(self, x):
@@ -65,6 +65,7 @@ class Agent(object):
         self.actions = []
         self.rewards = []
         self.done = []
+        # self.policy.eval()  # uncomment if testing
 
         # self.stacked_obs = None
         # self.prev_stacked_obs = None
@@ -120,7 +121,7 @@ class Agent(object):
         critic_loss = F.mse_loss(old_state_values, updated_state_values.detach())
 
         # # Compute advantage
-        # advantage = discounted_rewards - values
+        # advantage = discounted_rewards - old_state_values
 
         # Estimate advantage
         advantages = updated_state_values - old_state_values
