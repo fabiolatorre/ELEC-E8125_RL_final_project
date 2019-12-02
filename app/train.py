@@ -14,7 +14,7 @@ import torch
 import matplotlib.pyplot as plt
 
 # Make the environment
-env = gym.make("WimblepongMultiplayer-v0")
+env = gym.make("WimblepongVisualMultiplayer-v0")
 
 # Number of episodes/games to play
 episodes = 100000

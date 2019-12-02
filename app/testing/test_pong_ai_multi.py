@@ -29,7 +29,7 @@ episodes = 100000
 player_id = 1
 opponent_id = 3 - player_id
 opponent = wimblepong.SimpleAi(env, opponent_id)
-# player = wimblepong.SimpleAi(env, player_id)
+# player = app.SimpleAi(env, player_id)
 player = agent_smith.Agent(player_id)
 
 # Set the names for both SimpleAIs
@@ -58,24 +58,5 @@ for i in range(0, episodes):
         if not args.headless:
             env.render()
         if done:
-            observation = env.reset()
-    wr_array.append(win1 / (i + 1))
-    wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
-    if i % 20 == 0:
-        print("episode {} over. Broken WR: {:.3f}".format(i, wr_array[-1]))
-    if i % 5000 == 0:
-        player.save_model(str(i))
-        print("Model saved")
-        plt.plot(wr_array)
-        plt.plot(wr_array_avg)
-        plt.legend(["WR", "100-episode average"])
-        plt.title("WR history")
-        plt.savefig('./plots/WR_history_{}_training.pdf'.format(i))
-
-plt.plot(wr_array)
-plt.plot(wr_array_avg)
-plt.legend(["WR", "100-episode average"])
-plt.title("WR history")
-plt.savefig('./plots/WR_history_final.pdf')
-
-player.save_model("final")
+            observation= env.reset()
+            print("episode {} over. Broken WR: {:.3f}".format(i, win1/(i+1)))

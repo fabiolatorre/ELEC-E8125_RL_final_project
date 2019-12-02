@@ -1,9 +1,8 @@
 import argparse
 import sys
 import os
-from pong_testbench import PongTestbench
+from testing.pong_testbench import PongTestbench
 from multiprocessing import Process
-from matplotlib import font_manager
 from time import sleep
 
 parser = argparse.ArgumentParser()

@@ -217,6 +217,7 @@ class Agent(object):
             # self.stacked_obs = observation + shrink_term * (self.obs_prev_1 + self.obs_prev_2 + self.obs_prev_3)
             self.stacked_obs = observation + shrink_term * self.obs_prev_1
 
+        # TODO: consider stack
         # Update previous observations
         # self.obs_prev_3 = self.obs_prev_2  # oldest
         # self.obs_prev_2 = self.obs_prev_1
