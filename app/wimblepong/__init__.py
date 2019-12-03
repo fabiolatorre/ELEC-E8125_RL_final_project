@@ -21,4 +21,3 @@ gym.envs.register("WimblepongSimpleAI-v0",
         entry_point="wimblepong:Wimblepong",
         max_episode_steps=None,
         kwargs={"opponent": SimpleAi, "visual": False})
-
