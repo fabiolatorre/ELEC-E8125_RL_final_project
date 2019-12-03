@@ -24,7 +24,7 @@ def state_to_tensor(x):
     """ prepro 210x160x3 uint8 frame into 6000 (75x80) 1D float vector """
     if x is None:
         return torch.zeros(1, 9300)
-    x = x[7:193]  # crop - remove 35px from start & 25px from end of image in x, to reduce redundant parts of image (i.e. after ball passes paddle)
+    x = x[:, 7:193]  # crop - remove 35px from start & 25px from end of image in x, to reduce redundant parts of image (i.e. after ball passes paddle)
     x = x[::2, ::2, 0]  # downsample by factor of 2.
     x[x == 58] = 0  # erase background (background type 1)
     x[x == 43] = 0  # erase background (background type 2)

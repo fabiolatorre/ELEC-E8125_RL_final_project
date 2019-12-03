@@ -12,11 +12,13 @@ class Policy(torch.nn.Module):
         super(Policy, self).__init__()
         self.action_space = action_space
         self.eps_clip = 0.1
+        self.hidden_neurons = 256
+        self.input_dim = 9300 * 2
 
         self.layers = torch.nn.Sequential(
-            torch.nn.Linear(9300 * 2, 512),
+            torch.nn.Linear(self.input_dim, self.hidden_neurons),
             torch.nn.ReLU(),
-            torch.nn.Linear(512, self.action_space),
+            torch.nn.Linear(self.hidden_neurons, self.action_space),
         )
         # self.init_weights()
 
