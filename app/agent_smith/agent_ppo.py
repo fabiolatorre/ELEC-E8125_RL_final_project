@@ -5,6 +5,7 @@ from torch.distributions import Categorical
 import os
 import random
 from utils.utils import preprocess_ppo
+import copy
 
 
 class Policy(torch.nn.Module):
@@ -69,7 +70,7 @@ class Agent(object):
         # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_device = torch.device("cpu")
         self.policy = Policy().to(self.train_device)
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-3)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-4)
         self.player_id = player_id
         self.gamma = 0.99
 
@@ -145,7 +146,7 @@ class Agent(object):
 
     def get_action(self, observation):
 
-        self.pp_observation = preprocess_ppo(observation, self.previous_observation)
+        self.pp_observation = preprocess_ppo(copy.deepcopy(observation), self.previous_observation)
         action, action_prob = self.policy.forward(self.pp_observation, deterministic=self.evaluation)
         self.previous_observation = observation
         if self.evaluation:
