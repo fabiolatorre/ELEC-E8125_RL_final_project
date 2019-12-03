@@ -19,7 +19,6 @@ def discount_rewards(r, gamma):
 class Policy(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        # self.state_space = state_space
         self.action_space = 3
         self.hidden = 64
 
@@ -85,7 +84,7 @@ class Agent(object):
 
     def load_model(self):
         try:
-            weights = torch.load("../model_100.mdl", map_location=torch.device('cpu'))
+            weights = torch.load("../models/model_0.mdl", map_location=torch.device('cpu'))
             self.policy.load_state_dict(weights, strict=False)
         except FileNotFoundError:
             print("Model not found. Check the path and try again.")
@@ -93,7 +92,7 @@ class Agent(object):
     def save_model(self, output_directory, episode=0):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
-        f_name = "model_{}.mdl".format(episode)
+        f_name = "{}/model_{}.mdl".format(output_directory, episode)
         torch.save(self.policy.state_dict(), f_name)
 
     def episode_finished(self):
