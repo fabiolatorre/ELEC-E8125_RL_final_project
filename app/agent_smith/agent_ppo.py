@@ -2,53 +2,64 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
-from torchvision import transforms
-from PIL import Image
 import os
-
-
-def discount_rewards(r, gamma):
-    discounted_r = torch.zeros_like(r)
-    running_add = 0
-    for t in reversed(range(0, r.size(-1))):
-        running_add = running_add * gamma + r[t]
-        discounted_r[t] = running_add
-    return discounted_r
+import random
+from utils.utils import preprocess_ppo
 
 
 class Policy(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.action_space = 3
-        self.hidden = 64
+        self.eps_clip = 0.1
 
-        self.reshaped_size = 40*40
+        self.layers = torch.nn.Sequential(
+            torch.nn.Linear(9300 * 2, 512),
+            torch.nn.ReLU(),
+            torch.nn.Linear(512, 2),
+        )
+        # self.init_weights()
 
-        self.fc1 = torch.nn.Linear(self.reshaped_size, self.hidden)
-        self.fc2_ac = torch.nn.Linear(int(self.hidden), self.action_space)
-        self.fc2_cr = torch.nn.Linear(int(self.hidden), 1)
-        self.init_weights()
+    # def init_weights(self):
+    #     for m in self.modules():
+    #         if type(m) is torch.nn.Linear:
+    #             torch.nn.init.normal_(m.weight)  #, -1e-3, 1e-3)
+    #             torch.nn.init.zeros_(m.bias)
 
-    def init_weights(self):
-        for m in self.modules():
-            if type(m) is torch.nn.Linear:
-                torch.nn.init.normal_(m.weight)  #, -1e-3, 1e-3)
-                torch.nn.init.zeros_(m.bias)
+    def convert_action(self, action):
+        return action + 2
 
-    def forward(self, x):
-        # Common part
-        x = self.fc1(x)
-        x = F.relu(x)
+    def forward(self, d_obs, action=None, action_prob=None, advantage=None, deterministic=False):
+        if action is None:
+            with torch.no_grad():
+                logits = self.layers(d_obs)
+                if deterministic:
+                    action = int(torch.argmax(logits[0]).detach().cpu().numpy())
+                    action_prob = 1.0
+                else:
+                    c = torch.distributions.Categorical(logits=logits)
+                    action = int(c.sample().cpu().numpy()[0])
+                    action_prob = float(c.probs[0, action].detach().cpu().numpy())
+                return action, action_prob
+        '''
+        # policy gradient (REINFORCE)
+        logits = self.layers(d_obs)
+        loss = F.cross_entropy(logits, action, reduction='none') * advantage
+        return loss.mean()
+        '''
 
-        # Actor part
-        x_mean = self.fc2_ac(x)
-        x_probs = F.softmax(x_mean, dim=-1)
-        dist = Categorical(x_probs)
+        # PPO
+        vs = np.array([[1., 0.], [0., 1.]])
+        ts = torch.FloatTensor(vs[action.cpu().numpy()])
 
-        # Critic part
-        value = self.fc2_cr(x)
+        logits = self.layers(d_obs)
+        r = torch.sum(F.softmax(logits, dim=1) * ts, dim=1) / action_prob
+        loss1 = r * advantage
+        loss2 = torch.clamp(r, 1 - self.eps_clip, 1 + self.eps_clip) * advantage
+        loss = -torch.min(loss1, loss2)
+        loss = torch.mean(loss)
 
-        return dist, value
+        return loss
 
 
 class Agent(object):
@@ -56,27 +67,22 @@ class Agent(object):
         # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_device = torch.device("cpu")
         self.policy = Policy().to(self.train_device)
-        self.optimizer = torch.optim.RMSprop(self.policy.parameters(), lr=1e-3)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-3)
         self.player_id = player_id
-        self.gamma = 0.98
+        self.gamma = 0.99
         # self.policy.eval()  # uncomment if testing
 
         self.states = []
+        self.actions = []
         self.action_probs = []
         self.rewards = []
-        self.values = []
 
-        self.stacked_obs = None
-        self.prev_stacked_obs = None
+        self.discounted_rewards = []
 
-        # Previous observations (greatest number = oldest) - better using a FIFO stack
-        self.obs_prev_1 = 0
-        # self.obs_prev_2 = 0
-        # self.obs_prev_3 = 0
+        self.pp_observation = None
+        self.previous_observation = None
 
     def reset(self):
-        self.stacked_obs = None
-        self.prev_stacked_obs = None
         pass
 
     def get_name(self):
@@ -84,7 +90,7 @@ class Agent(object):
 
     def load_model(self):
         try:
-            weights = torch.load("../models/model_0.mdl", map_location=torch.device('cpu'))
+            weights = torch.load("../models/model_100.mdl", map_location=torch.device('cpu'))
             self.policy.load_state_dict(weights, strict=False)
         except FileNotFoundError:
             print("Model not found. Check the path and try again.")
@@ -96,113 +102,43 @@ class Agent(object):
         torch.save(self.policy.state_dict(), f_name)
 
     def episode_finished(self):
-        action_probs = torch.stack(self.action_probs, dim=0).to(self.train_device).squeeze(-1)
-        rewards = torch.stack(self.rewards, dim=0).to(self.train_device).squeeze(-1)
-        values = torch.stack(self.values, dim=0).to(self.train_device).squeeze(-1)
+        R = 0
+        self.discounted_rewards = []
+        for r in self.rewards[::-1]:
+            if r != 0: R = 0  # scored/lost a point in pong, so reset reward sum
+            R = r + self.gamma * R
+            self.discounted_rewards.insert(0, R)
 
-        self.states, self.action_probs, self.rewards, self.values = [], [], [], []
+            # print(discounted_rewards[:5])
 
-        # Compute discounted rewards
-        discounted_rewards = discount_rewards(rewards, self.gamma)
+        self.discounted_rewards = torch.FloatTensor(self.discounted_rewards)
+        self.discounted_rewards = (self.discounted_rewards - self.discounted_rewards.mean()) / self.discounted_rewards.std()
 
-        # Compute advantage
-        advantage = discounted_rewards - values
+        self.update_policy()
 
-        # Normalize advantage
-        advantage -= torch.mean(advantage)
-        advantage /= torch.std(advantage.detach())
-
-        weighted_probs = - action_probs * advantage.detach()
-
-        # Compute actor and critic loss
-        actor_loss = weighted_probs.mean()
-        critic_loss = advantage.pow(2).mean()
-        ac_loss = actor_loss + critic_loss
-
-        ac_loss.backward()
-
-        self.optimizer.step()
-        self.optimizer.zero_grad()
-
-    def store_outcome(self, action_prob, action, reward):
-        self.states.append(self.prev_stacked_obs)
+    def store_outcome(self, action, action_prob, reward):
+        self.states.append(self.pp_observation)
+        self.actions.append(action)
         self.action_probs.append(action_prob)
-        self.rewards.append(torch.Tensor([reward]))
+        self.rewards.append(reward)
 
     def update_policy(self):
-        self.optimizer.step()
-        self.optimizer.zero_grad()
+        for _ in range(5):
+            n_batch = 24576
+            idxs = random.sample(range(len(self.actions)), min(len(self.actions), n_batch))
+            d_obs_batch = torch.cat([self.states[idx] for idx in idxs], 0)
+            action_batch = torch.LongTensor([self.actions[idx] for idx in idxs])
+            action_prob_batch = torch.FloatTensor([self.action_probs[idx] for idx in idxs])
+            advantage_batch = torch.FloatTensor([self.discounted_rewards[idx] for idx in idxs])
+            # advantage_batch = (advantage_batch - advantage_batch.mean()) / advantage_batch.std()
+
+            self.optimizer.zero_grad()
+            loss = self.policy(d_obs_batch, action_batch, action_prob_batch, advantage_batch)
+            loss.backward()
+            self.optimizer.step()
 
     def get_action(self, observation, evaluation=False):
-        x = self.preprocess_no_fade(observation).to(self.train_device)
-        dist, value = self.policy.forward(x)
-
-        if evaluation:
-            action = torch.argmax(dist.probs)  # take most probable action
-        else:
-            action = dist.sample()  # sample from distribution
-
-        act_log_prob = dist.log_prob(action)
-
-        self.values.append(value)
-
-        return action, act_log_prob
-
-    def preprocess(self, observation):
-        # Image scaling
-        observation = observation[::5, ::5].mean(axis=-1)
-        backgroung_threshold = 50
-        threshold = 40
-        n_past_steps = 3
-        ball_color = 255
-
-        # Thresholding
-        observation = np.where(observation < backgroung_threshold, 0, observation)  # delete background
-        observation = np.where(np.logical_and(observation < ball_color, observation >= backgroung_threshold), threshold,
-                               observation)  # set bars to threshold
-        observation = np.where(observation == ball_color, n_past_steps * threshold, observation)  # set latest bal value
-
-        if self.stacked_obs is None:
-            self.stacked_obs = observation
-        else:
-            threshold_indices = self.stacked_obs >= threshold
-            self.stacked_obs[threshold_indices] -= threshold
-            self.stacked_obs = self.stacked_obs + observation
-
-            self.stacked_obs = np.where(self.stacked_obs > n_past_steps * threshold, n_past_steps * threshold,
-                                        self.stacked_obs)  # handle overlappings
-
-        return torch.from_numpy(self.stacked_obs).float().flatten()
-
-    def preprocess_no_fade(self, observation):
-        # Image scaling
-        observation = Image.fromarray(observation)
-        observation = transforms.Grayscale()(observation)
-        observation = transforms.Resize((40, 40), 0)(observation)
-        observation = transforms.ToTensor()(observation)
-        observation = observation.squeeze().numpy()
-
-        # Set parameters
-        background_threshold = 0.2
-        bars_color = 0.5
-        shrink_term = 0.8
-
-        # Apply thresholds
-        observation = np.where(observation < background_threshold, 0, observation)  # delete background
-        observation = np.where(np.logical_and(observation > 0, observation < 1), bars_color, observation)
-
-        # Compute stacked_obs
-        if self.stacked_obs is None:
-            self.stacked_obs = observation
-        else:
-            self.prev_stacked_obs = self.stacked_obs
-            # self.stacked_obs = observation + shrink_term * (self.obs_prev_1 + self.obs_prev_2 + self.obs_prev_3)
-            self.stacked_obs = observation + shrink_term * self.obs_prev_1
-
-        # TODO: consider using stack
-        # Update previous observations
-        # self.obs_prev_3 = self.obs_prev_2  # oldest
-        # self.obs_prev_2 = self.obs_prev_1
-        self.obs_prev_1 = np.where(observation == bars_color, 0, observation)
-
-        return torch.from_numpy(self.stacked_obs).float().flatten()
+        self.pp_observation = preprocess_ppo(observation, self.previous_observation)
+        action, action_prob = self.policy(self.pp_observation, deterministic=evaluation)
+        self.previous_observation = observation
+        return action, action_prob

@@ -2,7 +2,6 @@ import argparse
 import sys
 import os
 from pong_testbench import PongTestbench
-from matplotlib import font_manager
 import importlib
 
 parser = argparse.ArgumentParser()
@@ -15,7 +14,7 @@ parser.add_argument("--games", "-g", type=int, default=100, help="number of game
 args = parser.parse_args()
 
 sys.path.insert(0, args.dir1)
-import agent
+import agent_ppo as agent
 orig_wd = os.getcwd()
 os.chdir(args.dir1)
 agent1 = agent.Agent()

@@ -1,9 +1,10 @@
 import gym
 import numpy as np
 from wimblepong import SimpleAi
-from agent_smith.agent_ppo import Agent, Policy
+from agent_smith.agent_ppo import Agent
 from utils.utils import plot
 import os
+import torch
 
 PLOTS_DIR = os.path.abspath("./plots")
 MODELS_DIR = os.path.abspath("./models")
@@ -33,10 +34,13 @@ reward_history, reward_history_avg = [], []
 wr_array, wr_array_avg = [], []
 episode_length_history, episode_length_avg = [], []
 
-for episode in range(0, episodes):
-    if not episode % 1000:
-        # Initialize winning rate
-        win1 = 0
+# Initialize winning rate
+win1 = 0
+wr_reset = 100
+
+for episode in range(episodes):
+    if not episode % wr_reset:
+        win1 = 0  # Reset WR
 
     # Initialize values
     reward_sum = 0
@@ -46,32 +50,32 @@ for episode in range(0, episodes):
     # Resets
     player.reset()
     ob1, ob2 = env.reset()
+
     while not done:
         # Get the actions from both players
-        action1, action_prob1 = player.get_action(ob1)
+        with torch.no_grad():
+            action1, action_prob1 = player.get_action(ob1)
         action2 = opponent.get_action()
 
-        # Store previous observation
-        prev_ob1 = ob1
-
         # Step the environment and get the rewards and new observations
-        (ob1, ob2), (rew1, rew2), done, info = env.step((action1.detach().numpy(), action2))
+        (ob1, ob2), (rew1, rew2), done, info = env.step((action1+2, action2))
 
         # Count the wins
         if rew1 == 10:
             win1 += 1
 
         # Store action's outcome (so that the agent can improve its policy)
-        player.store_outcome(action_prob1, action1, rew1)
+        player.store_outcome(action1, action_prob1, rew1)
 
         # Store total episode reward
         reward_sum += rew1
         episode_length += 1
 
-    player.episode_finished()
+    if not episode % 10:
+        player.episode_finished()
 
     # Update WR values for plots
-    wr_array.append(win1 / (episode + 1))
+    wr_array.append(win1 / ((episode % wr_reset)+1))
     wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
 
     # Update reward values for plots
