@@ -36,7 +36,7 @@ episode_length_history, episode_length_avg = [], []
 
 # Initialize winning rate
 win1 = 0
-wr_reset = 100
+wr_reset = 1000
 
 for episode in range(episodes):
     if not episode % wr_reset:
@@ -54,7 +54,7 @@ for episode in range(episodes):
     while not done:
         # Get the actions from both players
         with torch.no_grad():
-            action1, action_prob1 = player.get_action(ob1)
+            action1, action_prob1 = player.get_action(ob1, evaluation=False)
         action2 = opponent.get_action()
 
         # Step the environment and get the rewards and new observations

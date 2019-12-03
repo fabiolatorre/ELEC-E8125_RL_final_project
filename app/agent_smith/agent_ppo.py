@@ -16,7 +16,7 @@ class Policy(torch.nn.Module):
         self.layers = torch.nn.Sequential(
             torch.nn.Linear(9300 * 2, 512),
             torch.nn.ReLU(),
-            torch.nn.Linear(512, 2),
+            torch.nn.Linear(512, self.action_space),
         )
         # self.init_weights()
 
@@ -26,8 +26,8 @@ class Policy(torch.nn.Module):
     #             torch.nn.init.normal_(m.weight)  #, -1e-3, 1e-3)
     #             torch.nn.init.zeros_(m.bias)
 
-    def convert_action(self, action):
-        return action + 2
+    # def convert_action(self, action):
+    #     return action + 2
 
     def forward(self, d_obs, action=None, action_prob=None, advantage=None, deterministic=False):
         if action is None:
@@ -49,7 +49,7 @@ class Policy(torch.nn.Module):
         '''
 
         # PPO
-        vs = np.array([[1., 0.], [0., 1.]])
+        vs = np.array([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
         ts = torch.FloatTensor(vs[action.cpu().numpy()])
 
         logits = self.layers(d_obs)
@@ -90,7 +90,7 @@ class Agent(object):
 
     def load_model(self):
         try:
-            weights = torch.load("../models/model_100.mdl", map_location=torch.device('cpu'))
+            weights = torch.load("../models/model_500.mdl", map_location=torch.device('cpu'))
             self.policy.load_state_dict(weights, strict=False)
         except FileNotFoundError:
             print("Model not found. Check the path and try again.")
@@ -137,8 +137,12 @@ class Agent(object):
             loss.backward()
             self.optimizer.step()
 
-    def get_action(self, observation, evaluation=False):
+    def get_action(self, observation, evaluation=True):
+
         self.pp_observation = preprocess_ppo(observation, self.previous_observation)
         action, action_prob = self.policy(self.pp_observation, deterministic=evaluation)
         self.previous_observation = observation
-        return action, action_prob
+        if evaluation:
+            return action
+        else:
+            return action, action_prob
