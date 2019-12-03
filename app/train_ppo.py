@@ -12,9 +12,6 @@ MODELS_DIR = os.path.abspath("./models")
 # Make the environment
 env = gym.make("WimblepongVisualMultiplayer-v0")
 
-# Number of episodes/games to play
-episodes = 100000
-
 # Define the player IDs for both SimpleAI agents
 player_id = 1
 opponent_id = 3 - player_id
@@ -24,7 +21,7 @@ opponent = SimpleAi(env, opponent_id)
 observation_space_dim = env.observation_space.shape[-1]
 action_space_dim = env.action_space.n
 
-player = Agent(player_id)
+player = Agent(player_id, evaluation=False)
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
@@ -38,7 +35,8 @@ episode_length_history, episode_length_avg = [], []
 win1 = 0
 wr_reset = 1000
 
-for episode in range(episodes):
+episode = 0
+while True:
     if not episode % wr_reset:
         win1 = 0  # Reset WR
 
@@ -54,11 +52,10 @@ for episode in range(episodes):
     while not done:
         # Get the actions from both players
         with torch.no_grad():
-            action1, action_prob1 = player.get_action(ob1, evaluation=False)
+            action1, action_prob1 = player.get_action(ob1)
         action2 = opponent.get_action()
-
         # Step the environment and get the rewards and new observations
-        (ob1, ob2), (rew1, rew2), done, info = env.step((action1+2, action2))
+        (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
 
         # Count the wins
         if rew1 == 10:
@@ -73,6 +70,9 @@ for episode in range(episodes):
 
     if not episode % 10:
         player.episode_finished()
+        player.reset()
+
+    # ---PLOTTING AND SAVING MODEL---
 
     # Update WR values for plots
     wr_array.append(win1 / ((episode % wr_reset)+1))
@@ -104,13 +104,4 @@ for episode in range(episodes):
         plot(reward_history, reward_history_avg, "Reward history", "reward_history_training",
              PLOTS_DIR, ["Reward", "100-episode average"])
 
-# Save final model
-player.save_model(MODELS_DIR, episodes)
-
-# Create final plot of the training performance WR
-plot(wr_array, wr_array_avg, "WR history", "WR_history_final",
-     PLOTS_DIR, ["WR", "100-episode average"])
-
-# Create final plot of the training performance reward
-plot(reward_history, reward_history_avg, "Reward history", "reward_history_final",
-     PLOTS_DIR, ["Reward", "100-episode average"])
+    episode += 1
