@@ -125,7 +125,7 @@ class Agent(object):
 
     def update_policy(self):
         for _ in range(5):
-            n_batch = 245
+            n_batch = 20000
             idxs = random.sample(range(len(self.actions)), min(len(self.actions), n_batch))
             d_obs_batch = torch.cat([self.states[idx] for idx in idxs], 0)
             action_batch = torch.LongTensor([self.actions[idx] for idx in idxs])
