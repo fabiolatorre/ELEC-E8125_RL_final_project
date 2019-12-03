@@ -8,9 +8,9 @@ from utils.utils import preprocess_ppo
 
 
 class Policy(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, action_space=3):
         super(Policy, self).__init__()
-        self.action_space = 3
+        self.action_space = action_space
         self.eps_clip = 0.1
 
         self.layers = torch.nn.Sequential(
@@ -46,7 +46,10 @@ class Policy(torch.nn.Module):
 
 
         # PPO
-        vs = np.array([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
+        if self.action_space == 3:
+            vs = np.array([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
+        elif self.action_space == 2:
+            vs = np.array([[1., 0.], [0., 1.]])
         ts = torch.FloatTensor(vs[action.cpu().numpy()])
 
         logits = self.layers(d_obs)
@@ -143,4 +146,7 @@ class Agent(object):
         self.pp_observation = preprocess_ppo(observation, self.previous_observation)
         action, action_prob = self.policy.forward(self.pp_observation, deterministic=self.evaluation)
         self.previous_observation = observation
-        return action if self.evaluation else action, action_prob
+        if self.evaluation:
+            return action
+        else:
+            return action, action_prob
