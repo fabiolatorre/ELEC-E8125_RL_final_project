@@ -96,7 +96,7 @@ class Agent(object):
 
     def load_model(self):
         try:
-            weights = torch.load("../models/model_500.mdl", map_location=torch.device('cpu'))
+            weights = torch.load("../models/model_15000.mdl", map_location=torch.device('cpu'))
             self.policy.load_state_dict(weights, strict=False)
         except FileNotFoundError:
             print("Model not found. Check the path and try again.")

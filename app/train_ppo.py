@@ -46,7 +46,6 @@ while True:
     done = False
 
     # Resets
-    player.reset()
     ob1, ob2 = env.reset()
 
     while not done:
