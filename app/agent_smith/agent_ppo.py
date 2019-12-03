@@ -89,6 +89,9 @@ class Agent(object):
         self.previous_observation = None
 
     def reset(self):
+        self.previous_observation = None
+
+    def reset_lists(self):
         self.states = []
         self.actions = []
         self.action_probs = []

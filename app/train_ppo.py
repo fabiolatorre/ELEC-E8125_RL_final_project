@@ -46,6 +46,7 @@ while True:
     done = False
 
     # Resets
+    player.reset()
     ob1, ob2 = env.reset()
 
     while not done:
@@ -69,7 +70,7 @@ while True:
 
     if not episode % 10:
         player.episode_finished()
-        player.reset()
+        player.reset_lists()
 
     # ---PLOTTING AND SAVING MODEL---
 
