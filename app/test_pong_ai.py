@@ -38,7 +38,7 @@ for i in range(0,episodes):
     done = False
     while not done:
         # action1 is zero because in this example no agent is playing as player 0
-        action1 = 0  # player.get_action()
+        action1 = 0 #player.get_action()
         ob1, rew1, done, info = env.step(action1)
         if args.housekeeping:
             states.append(ob1)

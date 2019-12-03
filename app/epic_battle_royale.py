@@ -1,8 +1,9 @@
 import argparse
 import sys
 import os
-from testing.pong_testbench import PongTestbench
+from pong_testbench import PongTestbench
 from multiprocessing import Process, Queue
+from matplotlib import font_manager
 from time import sleep
 import importlib
 import numpy as np

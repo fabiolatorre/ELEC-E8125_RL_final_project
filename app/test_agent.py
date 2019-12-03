@@ -1,7 +1,8 @@
 import argparse
 import sys
 import os
-from testing.pong_testbench import PongTestbench
+from pong_testbench import PongTestbench
+from matplotlib import font_manager
 import importlib
 
 parser = argparse.ArgumentParser()
