@@ -70,7 +70,7 @@ class Policy(torch.nn.Module):
             vs = np.array([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
         elif self.action_space == 2:
             vs = np.array([[1., 0.], [0., 1.]])
-        ts = torch.FloatTensor(vs[action.cuda().numpy()])
+        ts = torch.FloatTensor(vs[action.cpu().numpy()])
 
         logits = self.layers(d_obs)
         r = torch.sum(F.softmax(logits, dim=1) * ts, dim=1) / action_prob
@@ -84,8 +84,8 @@ class Policy(torch.nn.Module):
 
 class Agent(object):
     def __init__(self, player_id=1, evaluation=True):
-        self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # self.train_device = torch.device("cuda")
+        # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.train_device = torch.device("cpu")
         self.policy = Policy().to(self.train_device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-4)
         self.player_id = player_id
@@ -119,7 +119,7 @@ class Agent(object):
 
     def load_model(self):
         try:
-            weights = torch.load("../models/model_"+str(MODEL_EPISODE)+".mdl", map_location=torch.device('cuda'))
+            weights = torch.load("../models/model_"+str(MODEL_EPISODE)+".mdl", map_location=torch.device('cpu'))
             self.policy.load_state_dict(weights, strict=False)
         except FileNotFoundError:
             print("Model not found. Check the path and try again.")
