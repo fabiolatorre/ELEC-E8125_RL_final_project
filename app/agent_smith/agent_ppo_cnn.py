@@ -85,7 +85,7 @@ class Policy(torch.nn.Module):
 class Agent(object):
     def __init__(self, player_id=1, evaluation=True):
         # self.train_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.train_device = torch.device("cpu")
+        self.train_device = torch.device("cuda")
         self.policy = Policy().to(self.train_device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-4)
         self.player_id = player_id
