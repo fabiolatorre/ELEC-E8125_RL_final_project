@@ -51,11 +51,11 @@ class Policy(torch.nn.Module):
             with torch.no_grad():
                 logits = self.layers(d_obs)
                 if deterministic:
-                    action = int(torch.argmax(logits[0]).detach().cuda().numpy())
+                    action = int(torch.argmax(logits[0]).detach().cpu().numpy())
                     action_prob = 1.0
                 else:
                     c = torch.distributions.Categorical(logits=logits)
-                    action = int(c.sample().cuda().numpy()[0])
+                    action = int(c.sample().cpu().numpy()[0])
                     action_prob = float(c.probs[0, action].detach().cuda().numpy())
                 return action, action_prob
 
