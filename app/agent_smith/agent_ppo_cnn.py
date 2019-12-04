@@ -51,12 +51,12 @@ class Policy(torch.nn.Module):
             with torch.no_grad():
                 logits = self.layers(d_obs)
                 if deterministic:
-                    action = int(torch.argmax(logits[0]).detach().cpu().numpy())
+                    action = int(torch.argmax(logits[0]).detach().cuda().numpy())
                     action_prob = 1.0
                 else:
                     c = torch.distributions.Categorical(logits=logits)
-                    action = int(c.sample().cpu().numpy()[0])
-                    action_prob = float(c.probs[0, action].detach().cpu().numpy())
+                    action = int(c.sample().cuda().numpy()[0])
+                    action_prob = float(c.probs[0, action].detach().cuda().numpy())
                 return action, action_prob
 
         # # policy gradient (REINFORCE)
@@ -70,7 +70,7 @@ class Policy(torch.nn.Module):
             vs = np.array([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
         elif self.action_space == 2:
             vs = np.array([[1., 0.], [0., 1.]])
-        ts = torch.FloatTensor(vs[action.cpu().numpy()])
+        ts = torch.FloatTensor(vs[action.cuda().numpy()])
 
         logits = self.layers(d_obs)
         r = torch.sum(F.softmax(logits, dim=1) * ts, dim=1) / action_prob
@@ -119,7 +119,7 @@ class Agent(object):
 
     def load_model(self):
         try:
-            weights = torch.load("../models/model_"+str(MODEL_EPISODE)+".mdl", map_location=torch.device('cpu'))
+            weights = torch.load("../models/model_"+str(MODEL_EPISODE)+".mdl", map_location=torch.device('cuda'))
             self.policy.load_state_dict(weights, strict=False)
         except FileNotFoundError:
             print("Model not found. Check the path and try again.")
