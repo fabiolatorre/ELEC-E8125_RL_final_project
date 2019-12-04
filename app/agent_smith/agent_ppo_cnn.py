@@ -56,7 +56,7 @@ class Policy(torch.nn.Module):
                 else:
                     c = torch.distributions.Categorical(logits=logits)
                     action = int(c.sample().cpu().numpy()[0])
-                    action_prob = float(c.probs[0, action].detach().cuda().numpy())
+                    action_prob = float(c.probs[0, action].detach().cpu().numpy())
                 return action, action_prob
 
         # # policy gradient (REINFORCE)
@@ -70,7 +70,7 @@ class Policy(torch.nn.Module):
             vs = np.array([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
         elif self.action_space == 2:
             vs = np.array([[1., 0.], [0., 1.]])
-        ts = torch.FloatTensor(vs[action.cuda().numpy()])
+        ts = torch.FloatTensor(vs[action.cpu().numpy()])
 
         logits = self.layers(d_obs)
         r = torch.sum(F.softmax(logits, dim=1) * ts, dim=1) / action_prob
