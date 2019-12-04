@@ -13,7 +13,7 @@ class Policy(torch.nn.Module):
         super(Policy, self).__init__()
         self.action_space = action_space
         self.eps_clip = 0.1
-        self.hidden_neurons = 256
+        self.hidden_neurons = 512
         self.input_dim = 9300 * 2
 
         self.layers = torch.nn.Sequential(
@@ -148,7 +148,6 @@ class Agent(object):
             self.optimizer.step()
 
     def get_action(self, observation):
-
         self.pp_observation = preprocess_ppo(copy.deepcopy(observation), self.previous_observation)
         action, action_prob = self.policy.forward(self.pp_observation, deterministic=self.evaluation)
         self.previous_observation = observation
