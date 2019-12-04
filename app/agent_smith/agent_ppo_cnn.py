@@ -70,7 +70,7 @@ class Policy(torch.nn.Module):
             vs = np.array([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
         elif self.action_space == 2:
             vs = np.array([[1., 0.], [0., 1.]])
-        ts = torch.FloatTensor(vs[action.cpu().numpy()])
+        ts = torch.FloatTensor(vs[action.cuda().numpy()])
 
         logits = self.layers(d_obs)
         r = torch.sum(F.softmax(logits, dim=1) * ts, dim=1) / action_prob
