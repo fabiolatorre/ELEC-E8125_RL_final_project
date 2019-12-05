@@ -71,8 +71,7 @@ while True:
         rew1 /= 10
 
         player.store_transition(ob1, action1, next_ob1, rew1, done)
-        if not episode_length % 6:
-            player.update_network()
+        player.update_network()
 
         # Move to the next state
         ob1 = next_ob1
