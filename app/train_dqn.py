@@ -17,7 +17,7 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = SimpleAi(env, opponent_id)
 
-player = Agent(player_id, evaluation=False, device_name="cpu")
+player = Agent(player_id, evaluation=False, device_name="cuda")
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
@@ -69,7 +69,8 @@ while True:
             win1 += 1
 
         player.store_transition(ob1, action1, next_ob1, rew1, done)
-        player.update_network()
+        if not episode_length % 6:
+            player.update_network()
 
         # Move to the next state
         ob1 = next_ob1
@@ -77,7 +78,7 @@ while True:
         # Store total episode reward
         reward_sum += rew1
         episode_length += 1
-
+    print("done")
     if not episode % TARGET_UPDATE:
         player.update_target_network()
 
