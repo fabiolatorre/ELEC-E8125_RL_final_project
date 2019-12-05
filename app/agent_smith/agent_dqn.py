@@ -78,11 +78,11 @@ class Agent(object):
         self.target_net = DQN(device=self.device).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=1e-4)
-        self.replay_buffer_size = 60000  # TODO: tune
+        self.replay_buffer_size = 30000  # TODO: tune
         self.memory = ReplayMemory(self.replay_buffer_size)
-        self.batch_size = 120   # TODO: tune
+        self.batch_size = 100   # TODO: tune
         self.gamma = 0.98  # TODO: tune
-        self.target_net.eval()  # TODO: check
+        self.target_net.eval()
 
         self.evaluation = evaluation
         if self.evaluation:
