@@ -146,7 +146,7 @@ class Agent(object):
         # on the "older" target_net; selecting their best reward with max(1)[0].
         # This is merged based on the mask, such that we'll have either the expected
         # state value or 0 in case the state was final.
-        next_state_values = torch.zeros(self.batch_size)
+        next_state_values = torch.zeros(self.batch_size).to(self.device)
         next_state_values[non_final_mask.bool()] = self.target_net(non_final_next_states).max(1)[0].detach()
 
         expected_state_action_values = reward_batch + self.gamma * next_state_values
