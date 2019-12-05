@@ -17,7 +17,7 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = SimpleAi(env, opponent_id)
 
-player = Agent(player_id, evaluation=False, device_name="cuda")
+player = Agent(player_id, evaluation=False, device_name="cpu")
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
@@ -31,10 +31,9 @@ episode_length_history, episode_length_avg = [], []
 win1 = 0
 wr_reset = 1000
 
-TARGET_UPDATE = 6
-glie_a = 10000
+target_update = 8
+glie_a = 5000
 
-observations, actions, action_probs, rewards = [], [], [], []
 episode = 0
 
 # Training loop
@@ -45,10 +44,11 @@ while True:
     episode_length = 0
     done = False
     eps = glie_a/(glie_a+episode)
+    eps = max(eps, 0.03)
 
     # Resets
     player.reset()
-    ob1, ob2 = env.reset()
+    ob1, _ = env.reset()
 
     ob1 = player.preprocess(ob1)
 
@@ -61,12 +61,14 @@ while True:
         action1 = player.get_action_train(ob1, epsilon=eps)
         action2 = opponent.get_action()
         # Step the environment and get the rewards and new observations
-        (next_ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
+        (next_ob1, _), (rew1, _), done, _ = env.step((action1, action2))
         next_ob1 = player.preprocess(next_ob1)
 
         # Count the wins
         if rew1 == 10:
             win1 += 1
+
+        rew1 /= 10
 
         player.store_transition(ob1, action1, next_ob1, rew1, done)
         if not episode_length % 6:
@@ -79,7 +81,7 @@ while True:
         reward_sum += rew1
         episode_length += 1
 
-    if not episode % TARGET_UPDATE:
+    if not episode % target_update:
         player.update_target_network()
 
     # ---PLOTTING AND SAVING MODEL---

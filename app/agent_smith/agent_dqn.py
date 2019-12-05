@@ -81,7 +81,7 @@ class Agent(object):
         self.replay_buffer_size = 60000  # TODO: tune
         self.memory = ReplayMemory(self.replay_buffer_size)
         self.batch_size = 120   # TODO: tune
-        self.gamma = 0.99  # TODO: tune
+        self.gamma = 0.98  # TODO: tune
         self.target_net.eval()  # TODO: check
 
         self.evaluation = evaluation
@@ -173,6 +173,17 @@ class Agent(object):
         else:
             return random.randrange(self.n_actions)
 
+    def get_action(self, state, epsilon=0.05):
+        state = self.preprocess(state)
+        sample = random.random()
+        if sample > epsilon:
+            with torch.no_grad():
+                # state = torch.from_numpy(state).float()
+                q_values = self.policy_net(state)
+                return torch.argmax(q_values).item()
+        else:
+            return random.randrange(self.n_actions)
+
     def store_transition(self, state, action, next_state, reward, done):
         action = torch.Tensor([[action]]).long()
         reward = torch.tensor([reward], dtype=torch.float32)
@@ -189,7 +200,7 @@ class Agent(object):
         observation[observation == 43] = 0  # erase background (background type 2)
         observation[observation == 48] = 0  # erase background (background type 3)
         observation[
-            observation != 0] = 255  # everything else (paddles, ball) just set to 1. this makes the image grayscale effectively
+            observation != 0] = 1  # everything else (paddles, ball) just set to 1. this makes the image grayscale effectively
 
         # img = Image.fromarray(observation, 'RGB')
         # # img.save('my.png')
