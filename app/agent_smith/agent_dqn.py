@@ -127,7 +127,7 @@ class Agent(object):
 
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
-        non_final_mask = 1-torch.tensor(batch.done, dtype=torch.uint8)
+        non_final_mask = 1-torch.tensor(batch.done, dtype=torch.uint8).to(self.device)
         non_final_next_states = [s for nonfinal,s in zip(non_final_mask,
                                      batch.next_state) if nonfinal > 0]
         non_final_next_states = torch.stack(non_final_next_states).squeeze(1).to(self.device)
