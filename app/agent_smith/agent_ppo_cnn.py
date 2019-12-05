@@ -7,7 +7,6 @@ import random
 from PIL import Image
 #from utils.utils import preprocess_ppo_cnn
 import copy
-from collections import deque
 
 MODEL_EPISODE = 2200
 
@@ -122,9 +121,6 @@ class Agent(object):
         discounted_rewards = torch.FloatTensor(discounted_rewards)
         discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / discounted_rewards.std()
 
-        self.update_policy(discounted_rewards, obs_history, action_history, action_prob_history)
-
-    def update_policy(self, discounted_rewards, obs_history, action_history, action_prob_history):
         for _ in range(5):
             n_batch = int(0.7 * len(action_history))
             idxs = random.sample(range(len(action_history)), n_batch)
@@ -145,7 +141,7 @@ class Agent(object):
         observation[observation == 58] = 0  # erase background (background type 1)
         observation[observation == 43] = 0  # erase background (background type 2)
         observation[observation == 48] = 0  # erase background (background type 3)
-        observation[observation != 0] = 1  # everything else (paddles, ball) just set to 1. this makes the image grayscale effectively
+        observation[observation != 0] = 255  # everything else (paddles, ball) just set to 1. this makes the image grayscale effectively
 
         # img = Image.fromarray(observation, 'RGB')
         # # img.save('my.png')
