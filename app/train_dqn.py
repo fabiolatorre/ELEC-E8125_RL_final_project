@@ -78,7 +78,7 @@ while True:
         # Store total episode reward
         reward_sum += rew1
         episode_length += 1
-    print("done")
+
     if not episode % TARGET_UPDATE:
         player.update_target_network()
 
