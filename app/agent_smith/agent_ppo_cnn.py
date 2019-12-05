@@ -26,11 +26,13 @@ class Policy(torch.nn.Module):
 
         # self.init_weights()
 
-    # def init_weights(self):
-    #     for m in self.modules():
-    #         if type(m) is torch.nn.Linear:
-    #             torch.nn.init.normal_(m.weight)  #, -1e-3, 1e-3)
-    #             torch.nn.init.zeros_(m.bias)
+    def init_weights(self):
+        try:
+            weights = torch.load("./models/model_" + str(MODEL_EPISODE) + ".mdl",
+                                 map_location=torch.device(self.device))
+            self.load_state_dict(weights, strict=False)
+        except FileNotFoundError:
+            print("Model not found. Check the path and try again.")
 
     def layers(self, x):
         x = self.conv1(x)

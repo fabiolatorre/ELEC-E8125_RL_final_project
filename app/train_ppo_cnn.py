@@ -5,7 +5,6 @@ from agent_smith.agent_ppo_cnn import Agent
 from utils.utils import plot
 import os
 import torch
-from collections import deque
 
 PLOTS_DIR = os.path.abspath("./plots")
 MODELS_DIR = os.path.abspath("./models")
