@@ -66,7 +66,7 @@ class Agent(object):
         self.name = "Agent Smith"
         self.device = torch.device(device_name)
         self.policy = Policy(device=self.device).to(self.device)
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-4)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=1e-3)
         self.player_id = player_id
         self.gamma = 0.99
 
