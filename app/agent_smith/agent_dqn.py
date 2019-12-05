@@ -130,23 +130,23 @@ class Agent(object):
         non_final_mask = 1-torch.tensor(batch.done, dtype=torch.uint8)
         non_final_next_states = [s for nonfinal,s in zip(non_final_mask,
                                      batch.next_state) if nonfinal > 0]
-        non_final_next_states = torch.stack(non_final_next_states).squeeze(1)
-        state_batch = torch.stack(batch.state).squeeze(1)
-        action_batch = torch.cat(batch.action)
-        reward_batch = torch.cat(batch.reward)
+        non_final_next_states = torch.stack(non_final_next_states).squeeze(1).to(self.device)
+        state_batch = torch.stack(batch.state).squeeze(1).to(self.device)
+        action_batch = torch.cat(batch.action).to(self.device)
+        reward_batch = torch.cat(batch.reward).to(self.device)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
         state_action_values = self.policy_net(state_batch)
-        state_action_values = state_action_values.gather(1, action_batch.to(self.device))
+        state_action_values = state_action_values.gather(1, action_batch)
 
         # Compute V(s_{t+1}) for all next states.
         # Expected values of actions for non_final_next_states are computed based
         # on the "older" target_net; selecting their best reward with max(1)[0].
         # This is merged based on the mask, such that we'll have either the expected
         # state value or 0 in case the state was final.
-        next_state_values = torch.zeros(self.batch_size).to(self.device)
+        next_state_values = torch.zeros(self.batch_size)
         next_state_values[non_final_mask.bool()] = self.target_net(non_final_next_states).max(1)[0].detach()
 
         expected_state_action_values = reward_batch + self.gamma * next_state_values
