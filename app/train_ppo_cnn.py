@@ -5,7 +5,7 @@ from agent_smith.agent_ppo_cnn import Agent
 from utils.utils import plot
 import os
 import torch
-
+import gc
 PLOTS_DIR = os.path.abspath("./plots")
 MODELS_DIR = os.path.abspath("./models")
 
@@ -31,8 +31,12 @@ episode_length_history, episode_length_avg = [], []
 win1 = 0
 wr_reset = 1000
 
+observations, actions, action_probs, rewards = [], [], [], []
+
 episode = 0
 while True:
+    observations, actions, action_probs, rewards = None, None, None, None
+    del observations, actions, action_probs, rewards
     observations, actions, action_probs, rewards = [], [], [], []
     for batch in range(10):
         for ep in range(21):
@@ -107,6 +111,7 @@ while True:
                      PLOTS_DIR, ["Episode length", "100-episode average"])
 
             episode += 1
+        gc.collect()
 
     player.episode_batch_finished(observations, actions, action_probs, rewards)
 

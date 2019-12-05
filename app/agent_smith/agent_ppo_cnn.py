@@ -10,7 +10,6 @@ import copy
 
 MODEL_EPISODE = 2200
 
-
 class Policy(torch.nn.Module):
     def __init__(self, action_space=3, device=torch.device("cuda")):
         super(Policy, self).__init__()
