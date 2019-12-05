@@ -5,7 +5,8 @@ from agent_smith.agent_ppo_cnn import Agent
 from utils.utils import plot
 import os
 import torch
-import gc
+from collections import deque
+
 PLOTS_DIR = os.path.abspath("./plots")
 MODELS_DIR = os.path.abspath("./models")
 
@@ -31,87 +32,83 @@ episode_length_history, episode_length_avg = [], []
 win1 = 0
 wr_reset = 1000
 
-observations, actions, action_probs, rewards = [], [], [], []
+max_batch_length = 12000
 
+observations, actions, action_probs, rewards = [], [], [], []
 episode = 0
 while True:
-    observations, actions, action_probs, rewards = None, None, None, None
-    del observations, actions, action_probs, rewards
-    observations, actions, action_probs, rewards = [], [], [], []
-    for batch in range(10):
-        for ep in range(21):
+    # Initialize values
+    reward_sum = 0
+    episode_length = 0
+    done = False
 
-            # Initialize values
-            reward_sum = 0
-            episode_length = 0
-            done = False
+    # Resets
+    player.reset()
+    ob1, ob2 = env.reset()
 
-            # Resets
-            player.reset()
+    if not episode % wr_reset:
+        win1 = 0  # Reset WR
 
-            ob1, ob2 = env.reset()
+    while not done:
+        # Get the actions from both players
+        with torch.no_grad():
+            action1, action_prob1, pp_observation = player.get_action(ob1)
+        action2 = opponent.get_action()
+        # Step the environment and get the rewards and new observations
+        (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
 
-            if not episode % wr_reset:
-                win1 = 0  # Reset WR
+        # Count the wins
+        if rew1 == 10:
+            win1 += 1
 
-            while not done:
-                # Get the actions from both players
-                with torch.no_grad():
-                    action1, action_prob1, pp_observation = player.get_action(ob1)
-                action2 = opponent.get_action()
-                # Step the environment and get the rewards and new observations
-                (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
+        observations.append(pp_observation)
+        actions.append(action1)
+        action_probs.append(action_prob1)
+        rewards.append(rew1)
 
-                # Count the wins
-                if rew1 == 10:
-                    win1 += 1
+        # Store total episode reward
+        reward_sum += rew1
+        episode_length += 1
 
-                observations.append(pp_observation)
-                actions.append(action1)
-                action_probs.append(action_prob1)
-                rewards.append(rew1)
+    if len(actions) >= max_batch_length or episode_length >= 200:
+        player.episode_batch_finished(observations, actions, action_probs, rewards)
+        observations, actions, action_probs, rewards = [], [], [], []
 
-                # Store total episode reward
-                reward_sum += rew1
-                episode_length += 1
+    # ---PLOTTING AND SAVING MODEL---
 
-            # ---PLOTTING AND SAVING MODEL---
+    # Update WR values for plots
+    wr_array.append(win1 / ((episode % wr_reset) + 1))
+    wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array) - 100):]))
 
-            # Update WR values for plots
-            wr_array.append(win1 / ((episode % wr_reset) + 1))
-            wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array) - 100):]))
+    # Update reward values for plots
+    reward_history.append(reward_sum)
+    reward_history_avg.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
 
-            # Update reward values for plots
-            reward_history.append(reward_sum)
-            reward_history_avg.append(np.mean(reward_history[max(0, len(reward_history) - 100):]))
+    # Update episode_length values
+    episode_length_history.append(episode_length)
+    episode_length_avg.append(np.mean(episode_length_history[max(0, len(episode_length_history) - 100):]))
 
-            # Update episode_length values
-            episode_length_history.append(episode_length)
-            episode_length_avg.append(np.mean(episode_length_history[max(0, len(episode_length_history) - 100):]))
+    if not episode % 20 and episode:
+        print("Episode {} over. Broken WR: {:.3f}. AVG reward: {:.3f}. Episode legth: {:.2f}."
+              .format(episode, wr_array[-1], reward_history_avg[-1], episode_length_avg[-1]))
 
-            if not episode % 20 and episode:
-                print("Episode {} over. Broken WR: {:.3f}. AVG reward: {:.3f}. Episode legth: {:.2f}."
-                      .format(episode, wr_array[-1], reward_history_avg[-1], episode_length_avg[-1]))
+    if not episode % 1000 and episode:
+        # Save model
+        player.save_model(MODELS_DIR, episode)
+        print("Model saved")
 
-            if not episode % 1000 and episode:
-                # Save model
-                player.save_model(MODELS_DIR, episode)
-                print("Model saved")
+        # Update plot of the Winning Rate
+        plot(wr_array, wr_array_avg, "WR history", "WR_history_training",
+             PLOTS_DIR, ["WR", "100-episode average"])
 
-                # Update plot of the Winning Rate
-                plot(wr_array, wr_array_avg, "WR history", "WR_history_training",
-                     PLOTS_DIR, ["WR", "100-episode average"])
+        # Update plot of the reward
+        plot(reward_history, reward_history_avg, "Reward history", "reward_history_training",
+             PLOTS_DIR, ["Reward", "100-episode average"])
 
-                # Update plot of the reward
-                plot(reward_history, reward_history_avg, "Reward history", "reward_history_training",
-                     PLOTS_DIR, ["Reward", "100-episode average"])
+        # Update plot of the episode length
+        plot(episode_length_history, episode_length_avg, "Episode length", "episode_length_training",
+             PLOTS_DIR, ["Episode length", "100-episode average"])
 
-                # Update plot of the episode length
-                plot(episode_length_history, episode_length_avg, "Episode length", "episode_length_training",
-                     PLOTS_DIR, ["Episode length", "100-episode average"])
+    episode += 1
 
-            episode += 1
-        gc.collect()
-
-    player.episode_batch_finished(observations, actions, action_probs, rewards)
 
