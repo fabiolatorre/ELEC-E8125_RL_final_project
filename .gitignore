@@ -13,3 +13,5 @@ gen
 *models/
 *plots/
 *.png
+*ppo_j/
+*ppo_s/

@@ -8,8 +8,40 @@ import os
 
 MODEL_NUMBER = 100
 
+
+class ReplayMemory(object):
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.memory = []
+        self.position = 0
+
+    def push(self, *args):
+        """Saves a transition."""
+        if len(self.memory) < self.capacity:
+            self.memory.append(None)
+        self.memory[self.position] = Transition(*args)
+        self.position = (self.position + 1) % self.capacity
+
+    def sample(self, batch_size):
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
+
+
 class DQN(torch.nn.Module):
- pass
+    def __initn__(self):
+        super(DQN, self).__init__()
+        self.num
+        self.gamma = 0.99
+
+        self.hidden_neurons = 512
+        self.reshaped_size = 3520
+
+        self.conv1 = torch.nn.Conv2d(2, 16, 8, 4)
+        self.conv2 = torch.nn.Conv2d(16, 32, 4, 2)
+        self.fc1 = torch.nn.Linear(3520, 256)
+        self.fc2 = torch.nn.Linear(256, self.action_space)
 
 
 class Agent(object):
@@ -54,36 +86,25 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import random
-from utils import Transition, ReplayMemory
+from utils.utils_dqn import Transition, ReplayMemory
 
-
-class DQN(nn.Module):
-    def __init__(self, state_space_dim, action_space_dim, hidden=12):
-        super(DQN, self).__init__()
-        self.hidden = hidden
-        self.fc1 = nn.Linear(state_space_dim, hidden)
-        self.fc2 = nn.Linear(hidden, action_space_dim)
-
-    def forward(self, x):
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        return x
 
 
 class Agent(object):
-    def __init__(self, state_space, n_actions, replay_buffer_size=50000,
+    def __init__(self, state_space,
                  batch_size=32, hidden_size=12, gamma=0.98):
-        self.n_actions = n_actions
+        self.n_actions = 3
         self.state_space_dim = state_space
-        self.policy_net = DQN(state_space, n_actions, hidden_size)
-        self.target_net = DQN(state_space, n_actions, hidden_size)
+        self.policy_net = DQN(state_space, self.n_actions, hidden_size)
+        self.target_net = DQN(state_space, self.n_actions, hidden_size)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
-        self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=1e-3)
-        self.memory = ReplayMemory(replay_buffer_size)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=1e-4)
+        self.memory = ReplayMemory(12000)
         self.batch_size = batch_size
-        self.gamma = gamma
+
+
+
 
     def update_network(self, updates=1):
         for _ in range(updates):

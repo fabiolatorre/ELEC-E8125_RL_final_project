@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 from wimblepong import SimpleAi
-from agent_smith.agent_dqn import Agent, Policy
+from agent_smith.agent_dqn import Agent
 from utils.utils import plot
 import os
 
