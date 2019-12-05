@@ -139,7 +139,7 @@ class Agent(object):
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
         state_action_values = self.policy_net(state_batch)
-        state_action_values = state_action_values.gather(1, action_batch)
+        state_action_values = state_action_values.gather(1, action_batch.to(self.device))
 
         # Compute V(s_{t+1}) for all next states.
         # Expected values of actions for non_final_next_states are computed based

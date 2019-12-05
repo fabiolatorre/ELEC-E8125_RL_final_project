@@ -17,7 +17,7 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = SimpleAi(env, opponent_id)
 
-player = Agent(player_id, evaluation=False, device_name="cpu")
+player = Agent(player_id, evaluation=False, device_name="cuda")
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
