@@ -42,8 +42,8 @@ class DQN(torch.nn.Module):
 
         self.conv1 = torch.nn.Conv2d(4, 16, 8, 4)
         self.conv2 = torch.nn.Conv2d(16, 32, 4, 2)
-        self.fc1 = torch.nn.Linear(3520, 256)
-        self.fc2 = torch.nn.Linear(256, self.action_space)
+        self.fc1 = torch.nn.Linear(3520, 360)
+        self.fc2 = torch.nn.Linear(360, self.action_space)
 
         # self.init_weights()
 
@@ -56,7 +56,6 @@ class DQN(torch.nn.Module):
             print("Model not found. Check the path and try again.")
 
     def forward(self, x):
-
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
@@ -77,11 +76,11 @@ class Agent(object):
         self.policy_net = DQN(device=self.device).to(self.device)
         self.target_net = DQN(device=self.device).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=1e-4)
-        self.replay_buffer_size = 30000  # TODO: tune
+        self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=1e-3)
+        self.replay_buffer_size = 8000  # TODO: tune
         self.memory = ReplayMemory(self.replay_buffer_size)
-        self.batch_size = 100   # TODO: tune
-        self.gamma = 0.98  # TODO: tune
+        self.batch_size = 200   # TODO: tune
+        self.gamma = 0.99  # TODO: tune
         self.target_net.eval()
 
         self.evaluation = evaluation
@@ -193,14 +192,12 @@ class Agent(object):
 
     def preprocess(self, observation):
         """ prepro 200x200x3 uint8 frame into 6000 (75x80) 1D float vector """
-        observation = observation[:,
-                      8:192]  # crop - remove 35px from start & 25px from end of image in x, to reduce redundant parts of image (i.e. after ball passes paddle)
+        observation = observation[:, 8:192]  # crop - remove 35px from start & 25px from end of image in x, to reduce redundant parts of image (i.e. after ball passes paddle)
         observation = observation[::2, ::2]  # downsample by factor of 2.
         observation[observation == 58] = 0  # erase background (background type 1)
         observation[observation == 43] = 0  # erase background (background type 2)
         observation[observation == 48] = 0  # erase background (background type 3)
-        observation[
-            observation != 0] = 1  # everything else (paddles, ball) just set to 1. this makes the image grayscale effectively
+        observation[observation != 0] = 1  # everything else (paddles, ball) just set to 1. this makes the image grayscale effectively
 
         # img = Image.fromarray(observation, 'RGB')
         # # img.save('my.png')
