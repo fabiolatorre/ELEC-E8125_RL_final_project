@@ -5,6 +5,7 @@ from torch.distributions import Categorical
 import os
 import random
 import copy
+from PIL import Image
 
 
 #################################################
@@ -168,6 +169,11 @@ class Agent(object):
         self.rewards.append(reward)
 
     def preprocess(self, observation):
+
+        # Plot pic for debug
+        # img = Image.fromarray(observation, 'RGB')
+        # img.save('original_input.png')
+
         observation = observation[:, 8:192]  # Crop pixels after ball passes paddle
         observation = observation[::2, ::2]  # Downsample the picture by factor of 2
 
@@ -176,13 +182,12 @@ class Agent(object):
         observation[observation == 43] = 0
         observation[observation == 48] = 0
 
-        # Plot pic for debug
-        # img = Image.fromarray(observation, 'RGB')
-        # # img.save('my.png')
-        # img.show()
-
         # Squeeze 3 channels in 1 through mean
         observation = observation[::, ::].mean(axis=-1)
+
+        # Plot pic for debug
+        # img = Image.fromarray(np.uint8(observation))
+        # img.save('processed_input.png')
 
         # Assure that previous obs is not empty
         if self.previous_observation is None:
