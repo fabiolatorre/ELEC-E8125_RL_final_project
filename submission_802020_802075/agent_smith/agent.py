@@ -10,7 +10,7 @@ import copy
 #################################################
 # IMPORTANT: CHANGE THE PATH OF THE MODEL BELOW #
 #################################################
-PATH_MODEL_TO_LOAD = "../models/model.mdl"
+PATH_MODEL_TO_LOAD = "./model.mdl"
 
 
 class Policy(torch.nn.Module):

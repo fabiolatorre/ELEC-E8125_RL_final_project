@@ -108,7 +108,7 @@ while True:
         player.save_model(MODELS_DIR, episode)
         print("Model saved")
 
-    if not episode % 10 and episode:
+    if not episode % 1000 and episode:
         # Create plot of the training performance WR
         plot(wr_array, wr_array_avg, "WR history", "WR_history_training",
              PLOTS_DIR, ["WR", "100-episode average"])

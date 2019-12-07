@@ -1,26 +1,13 @@
 import gym
 import numpy as np
 from wimblepong import SimpleAi
-from agent_smith.agent_ppo_cnn import Agent
-import matplotlib.pyplot as plt
+from agent_smith.agent_ppo_cnn_prev import Agent
+from utils.utils import plot
 import os
 import torch
 
 PLOTS_DIR = os.path.abspath("./plots")
 MODELS_DIR = os.path.abspath("./models")
-
-
-def plot(data, data_avg, title, file_name, output_directory, legend=None):
-    plt.plot(data)
-    plt.plot(data_avg)
-    if legend is not None:
-        plt.legend(legend, loc='upper left')
-    plt.title(title)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-    plt.savefig("{}/{}.pdf".format(output_directory, file_name))
-    plt.clf()
-
 
 # Make the environment
 env = gym.make("WimblepongVisualMultiplayer-v0")
@@ -30,11 +17,7 @@ player_id = 1
 opponent_id = 3 - player_id
 opponent = SimpleAi(env, opponent_id)
 
-# Get dimensionalities of actions and observations
-observation_space_dim = env.observation_space.shape[-1]
-action_space_dim = env.action_space.n
-
-player = Agent(player_id, evaluation=False)
+player = Agent(player_id, evaluation=False, device_name="cpu")
 
 # Set the names for both players
 env.set_names(player.get_name(), opponent.get_name())
@@ -48,11 +31,11 @@ episode_length_history, episode_length_avg = [], []
 win1 = 0
 wr_reset = 1000
 
+max_batch_length = 12000
+
+observations, actions, action_probs, rewards = [], [], [], []
 episode = 0
 while True:
-    if not episode % wr_reset:
-        win1 = 0  # Reset WR
-
     # Initialize values
     reward_sum = 0
     episode_length = 0
@@ -60,36 +43,41 @@ while True:
 
     # Resets
     player.reset()
-    ob1, _ = env.reset()
+    ob1, ob2 = env.reset()
+
+    if not episode % wr_reset:
+        win1 = 0  # Reset WR
 
     while not done:
         # Get the actions from both players
         with torch.no_grad():
-            action1, action_prob1 = player.get_action(ob1)
+            action1, action_prob1, pp_observation = player.get_action(ob1)
         action2 = opponent.get_action()
         # Step the environment and get the rewards and new observations
-        (ob1, _), (rew1, _), done, _ = env.step((action1, action2))
+        (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
 
         # Count the wins
         if rew1 == 10:
             win1 += 1
 
-        # Store action's outcome (so that the agent can improve its policy)
-        player.store_outcome(action1, action_prob1, rew1)
+        observations.append(pp_observation)
+        actions.append(action1)
+        action_probs.append(action_prob1)
+        rewards.append(rew1)
 
         # Store total episode reward
         reward_sum += rew1
         episode_length += 1
 
-    if not episode % 10:
-        player.episode_finished()
-        player.reset_lists()
+    if len(actions) >= max_batch_length or episode_length >= 200:
+        player.episode_batch_finished(observations, actions, action_probs, rewards)
+        observations, actions, action_probs, rewards = [], [], [], []
 
     # ---PLOTTING AND SAVING MODEL---
 
     # Update WR values for plots
-    wr_array.append(win1 / ((episode % wr_reset)+1))
-    wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array)-100):]))
+    wr_array.append(win1 / ((episode % wr_reset) + 1))
+    wr_array_avg.append(np.mean(wr_array[max(0, len(wr_array) - 100):]))
 
     # Update reward values for plots
     reward_history.append(reward_sum)
@@ -104,17 +92,22 @@ while True:
               .format(episode, wr_array[-1], reward_history_avg[-1], episode_length_avg[-1]))
 
     if not episode % 1000 and episode:
-        # Save model during training
+        # Save model
         player.save_model(MODELS_DIR, episode)
         print("Model saved")
 
-    if not episode % 10 and episode:
-        # Create plot of the training performance WR
+        # Update plot of the Winning Rate
         plot(wr_array, wr_array_avg, "WR history", "WR_history_training",
              PLOTS_DIR, ["WR", "100-episode average"])
 
-        # Create plot of the training performance reward
+        # Update plot of the reward
         plot(reward_history, reward_history_avg, "Reward history", "reward_history_training",
              PLOTS_DIR, ["Reward", "100-episode average"])
 
+        # Update plot of the episode length
+        plot(episode_length_history, episode_length_avg, "Episode length", "episode_length_training",
+             PLOTS_DIR, ["Episode length", "100-episode average"])
+
     episode += 1
+
+

@@ -42,15 +42,15 @@ class DQN(torch.nn.Module):
 
         self.conv1 = torch.nn.Conv2d(4, 16, 8, 4)
         self.conv2 = torch.nn.Conv2d(16, 32, 4, 2)
-        self.fc1 = torch.nn.Linear(3520, 360)
-        self.fc2 = torch.nn.Linear(360, self.action_space)
+        self.fc1 = torch.nn.Linear(3520, 256)
+        self.fc2 = torch.nn.Linear(256, self.action_space)
 
         # self.init_weights()
 
     def init_weights(self):
         try:
             weights = torch.load("./models/model_" + str(MODEL_EPISODE) + ".mdl",
-                                 map_location=torch.device(self.device))
+                                 map_location=self.device)
             self.load_state_dict(weights, strict=False)
         except FileNotFoundError:
             print("Model not found. Check the path and try again.")
