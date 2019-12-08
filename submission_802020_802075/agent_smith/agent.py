@@ -111,18 +111,6 @@ class Agent(object):
         f_name = "{}/model_{}.mdl".format(output_directory, episode)
         torch.save(self.policy.state_dict(), f_name)
 
-        def get_action(self, observation):
-            self.pp_observation = self.preprocess(observation)
-            logits = self.policy.layers(self.pp_observation)
-            if self.evaluation:
-                action = int(torch.argmax(logits[0]).detach().cpu().numpy())
-                return action
-            else:
-                c = torch.distributions.Categorical(logits=logits)
-                action = int(c.sample().cpu().numpy()[0])
-                action_prob = float(c.probs[0, action].detach().cpu().numpy())
-                return action, action_prob
-
     def get_action(self, observation):
         self.pp_observation = self.preprocess(observation)
         logits = self.policy.layers(self.pp_observation)
